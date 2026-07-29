@@ -32,11 +32,24 @@ export function parseNumberToken(raw: string): ParsedNum | null {
   const text = raw.trim()
   // 날짜(2019/11/16 등)는 가격이 아님
   if (/\d\s*[/]\s*\d/.test(text)) return null
-  const hasSep = /\d,\d{2,3}/.test(text)
+
   const isNeg = /^[-–—]/.test(text)
-  const digits = text.replace(/[^\d]/g, '')
-  if (!digits) return null
-  const value = parseInt(digits, 10)
+
+  // 쉼표가 있으면 '엄격한 천단위 그룹(,다음 정확히 3자리)'에 맞는 부분만 취한다.
+  // 예) "11,9708"(뒤 8이 오인식으로 붙음) → "11,970" → 11970
+  const sepMatch = text.match(/\d{1,3}(?:,\d{3})+/)
+  let value: number
+  let hasSep: boolean
+  if (sepMatch) {
+    value = parseInt(sepMatch[0].replace(/,/g, ''), 10)
+    hasSep = true
+  } else {
+    const digits = text.replace(/[^\d]/g, '')
+    if (!digits) return null
+    value = parseInt(digits, 10)
+    hasSep = false
+  }
+
   if (!Number.isFinite(value) || value <= 0 || value >= 100_000_000) return null
   return { value, hasSep, isNeg }
 }
@@ -49,6 +62,7 @@ function scoreCandidate(c: Candidate, maxSize: number, maxY: number): number {
   if (!c.hasSep && c.value >= 1900 && c.value <= 2099) s -= 30 // 연도
   if (c.isNeg) s -= 35 // 할인액
   if (c.value < 100) s -= 15 // 너무 작은 값
+  if (c.value % 10 === 0) s += 6 // 한국 표시가는 대부분 10원 단위 (끝자리 0)
   if (maxY > 0) s += (c.y / maxY) * 12 // 아래쪽 = 최종가 (약한 신호)
   return s
 }

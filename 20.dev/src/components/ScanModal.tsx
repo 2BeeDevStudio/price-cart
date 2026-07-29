@@ -17,6 +17,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [candidates, setCandidates] = useState<number[]>([])
   const [price, setPrice] = useState('')
   const [engine, setEngine] = useState<OcrEngine | null>(null)
+  const [rawText, setRawText] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   // 미리보기 objectURL 정리
@@ -39,6 +40,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       // 온라인: 클라우드(Vision), 오프라인/실패: 온디바이스 자동 폴백
       const result = await recognizePrice(file, setProgress)
       setEngine(result.engine)
+      setRawText(result.rawText)
       setCandidates(result.candidates.slice(0, 6))
       setPrice(result.best != null ? String(result.best) : '')
       setPhase('review')
@@ -63,6 +65,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setCandidates([])
     setPrice('')
     setEngine(null)
+    setRawText('')
     setError(null)
     fileRef.current?.click()
   }
@@ -231,6 +234,17 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                   확인
                 </button>
               </div>
+
+              {rawText.trim() && (
+                <details className="mt-4">
+                  <summary className="cursor-pointer text-xs text-slate-300">
+                    인식 원문 보기 (디버그)
+                  </summary>
+                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[11px] leading-tight text-slate-500">
+                    {rawText}
+                  </pre>
+                </details>
+              )}
             </div>
           )}
         </div>
