@@ -19,6 +19,8 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [name, setName] = useState('')
   const [engine, setEngine] = useState<OcrEngine | null>(null)
   const [rawText, setRawText] = useState('')
+  const [cloudError, setCloudError] = useState<string | undefined>(undefined)
+  const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // 미리보기 objectURL 정리
@@ -42,6 +44,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       const result = await recognizePrice(file, setProgress)
       setEngine(result.engine)
       setRawText(result.rawText)
+      setCloudError(result.cloudError)
       setName(result.nameGuess)
       setCandidates(result.candidates.slice(0, 6))
       setPrice(result.best != null ? String(result.best) : '')
@@ -69,6 +72,8 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setName('')
     setEngine(null)
     setRawText('')
+    setCloudError(undefined)
+    setCopied(false)
     setError(null)
     fileRef.current?.click()
   }
@@ -86,6 +91,40 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     const n = parseInt(price.replace(/[^\d]/g, ''), 10)
     return Number.isFinite(n) && n > 0 ? formatWon(n) : null
   })()
+
+  function debugText() {
+    return [
+      `engine: ${engine ?? '-'}`,
+      cloudError ? `cloudError: ${cloudError}` : 'cloudError: (none)',
+      `candidates: ${candidates.join(', ')}`,
+      `nameGuess: ${name}`,
+      '--- rawText ---',
+      rawText,
+    ].join('\n')
+  }
+
+  async function copyDebug() {
+    const text = debugText()
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // clipboard API 실패 시 fallback
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try {
+        document.execCommand('copy')
+      } catch {
+        /* ignore */
+      }
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-black/60" onClick={onClose}>
@@ -250,13 +289,38 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                 </button>
               </div>
 
-              {rawText.trim() && (
+              {(rawText.trim() || cloudError) && (
                 <details className="mt-4">
                   <summary className="cursor-pointer text-xs text-slate-300">
                     인식 원문 보기 (디버그)
                   </summary>
-                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[11px] leading-tight text-slate-500">
-                    {rawText}
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        engine === 'cloud'
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-amber-50 text-amber-600'
+                      }`}
+                    >
+                      엔진: {engine === 'cloud' ? 'Vision(클라우드)' : '기기(Tesseract)'}
+                    </span>
+                    <button
+                      onClick={copyDebug}
+                      className="ml-auto rounded-lg bg-slate-800 px-3 py-1 text-[11px] font-semibold text-white active:bg-slate-700"
+                    >
+                      {copied ? '복사됨 ✓' : '전체 복사'}
+                    </button>
+                  </div>
+
+                  {cloudError && (
+                    <div className="mt-2 rounded-lg bg-red-50 p-2 text-[11px] leading-tight text-red-500">
+                      클라우드 실패 사유: {cloudError}
+                    </div>
+                  )}
+
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[11px] leading-tight text-slate-500">
+                    {debugText()}
                   </pre>
                 </details>
               )}

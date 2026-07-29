@@ -15,6 +15,8 @@ export interface OcrResult {
   rawText: string
   /** 실제 사용된 엔진 */
   engine: OcrEngine
+  /** 클라우드가 실패해 폴백한 경우 그 이유 (진단용) */
+  cloudError?: string
 }
 
 /**
@@ -28,15 +30,19 @@ export async function recognizePrice(
 ): Promise<OcrResult> {
   const online = typeof navigator === 'undefined' || navigator.onLine
 
+  let cloudError: string | undefined
   if (online) {
     try {
       const r = await recognizeCloud(file)
       return { ...r, nameGuess: guessProductName(r.rawText), engine: 'cloud' }
     } catch (e) {
+      cloudError = e instanceof Error ? e.message : String(e)
       console.warn('클라우드 OCR 실패 → 온디바이스로 대체:', e)
     }
+  } else {
+    cloudError = 'offline (navigator.onLine=false)'
   }
 
   const r = await recognizeLocal(file, onProgress)
-  return { ...r, nameGuess: guessProductName(r.rawText), engine: 'local' }
+  return { ...r, nameGuess: guessProductName(r.rawText), engine: 'local', cloudError }
 }

@@ -126,7 +126,11 @@ export function guessProductName(text: string): string {
   scored.sort(
     (a, b) => b.hangul - a.hangul || b.letters + b.hangul - (a.letters + a.hangul),
   )
-  return scored[0].l.slice(0, 40)
+  // 앞뒤 기호(©, *, 따옴표 등) 정리
+  return scored[0].l
+    .replace(/^[^0-9A-Za-z가-힣]+/, '')
+    .replace(/[^0-9A-Za-z가-힣)\]]+$/, '')
+    .slice(0, 40)
 }
 
 /** 텍스트만 있을 때(위치정보 없음) 가격 후보 뽑기 — fallback */
