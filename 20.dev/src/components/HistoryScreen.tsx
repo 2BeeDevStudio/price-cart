@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useCart } from '../store/cart'
 import { formatWon, formatDateKo } from '../lib/format'
+import type { Item, ShoppingTrip } from '../types'
+import StorePicker from './StorePicker'
 
 interface HistoryScreenProps {
   onClose: () => void
@@ -9,11 +11,28 @@ interface HistoryScreenProps {
 export default function HistoryScreen({ onClose }: HistoryScreenProps) {
   const trips = useCart((s) => s.trips)
   const removeTrip = useCart((s) => s.removeTrip)
+  const setTripStore = useCart((s) => s.setTripStore)
+  const updateTripItems = useCart((s) => s.updateTripItems)
+
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [storeEditId, setStoreEditId] = useState<string | null>(null)
+
+  const storeEditTrip = trips.find((t) => t.id === storeEditId) ?? null
+
+  function changeQty(trip: ShoppingTrip, itemId: string, delta: number) {
+    const items = trip.items.map((it) =>
+      it.id === itemId ? { ...it, quantity: Math.max(1, it.quantity + delta) } : it,
+    )
+    updateTripItems(trip.id, items)
+  }
+
+  function removeItem(trip: ShoppingTrip, itemId: string) {
+    const items: Item[] = trip.items.filter((it) => it.id !== itemId)
+    updateTripItems(trip.id, items)
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-slate-100">
-      {/* 헤더 */}
       <header className="safe-top sticky top-0 z-10 bg-brand text-white shadow-md">
         <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-4">
           <button
@@ -53,9 +72,13 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
                         <span className="font-semibold text-slate-900">
                           {formatDateKo(trip.date)}
                         </span>
-                        {trip.store && (
+                        {trip.store ? (
                           <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
                             {trip.store}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-400">
+                            마트 없음
                           </span>
                         )}
                       </div>
@@ -76,29 +99,85 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
                   </button>
 
                   {open && (
-                    <div className="border-t border-slate-100 px-4 py-2">
+                    <div className="border-t border-slate-100 px-4 py-3">
+                      {/* 마트 수정 */}
+                      <button
+                        onClick={() => setStoreEditId(trip.id)}
+                        className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 active:bg-slate-200"
+                      >
+                        🏬 {trip.store || '마트 추가'}
+                        <span className="text-xs text-slate-400">수정</span>
+                      </button>
+
+                      {/* 상품 목록 (수량 ±, 삭제) */}
                       <ul className="divide-y divide-slate-50">
                         {trip.items.map((it) => (
-                          <li key={it.id} className="flex items-center justify-between py-2 text-sm">
-                            <span className="min-w-0 flex-1 truncate text-slate-600">
-                              {it.name || '상품'}
-                              {it.quantity > 1 && (
-                                <span className="text-slate-400"> × {it.quantity}</span>
+                          <li key={it.id} className="flex items-center gap-2 py-2">
+                            <div className="min-w-0 flex-1">
+                              {it.name && (
+                                <div className="truncate text-xs text-slate-400">{it.name}</div>
                               )}
-                            </span>
-                            <span className="ml-3 font-medium tabular-nums text-slate-700">
-                              {formatWon(it.price * it.quantity)}
-                            </span>
+                              <div className="text-sm font-medium tabular-nums text-slate-700">
+                                {formatWon(it.price * it.quantity)}
+                                {it.quantity > 1 && (
+                                  <span className="ml-1 text-xs font-normal text-slate-400">
+                                    ({formatWon(it.price)}×{it.quantity})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center rounded-full border border-slate-200">
+                              <button
+                                aria-label="수량 감소"
+                                onClick={() => changeQty(trip, it.id, -1)}
+                                disabled={it.quantity <= 1}
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-base font-bold text-slate-600 active:bg-slate-100 disabled:text-slate-300"
+                              >
+                                −
+                              </button>
+                              <span className="w-6 text-center text-sm font-semibold tabular-nums text-slate-800">
+                                {it.quantity}
+                              </span>
+                              <button
+                                aria-label="수량 증가"
+                                onClick={() => changeQty(trip, it.id, 1)}
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-base font-bold text-brand active:bg-slate-100"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <button
+                              aria-label="상품 삭제"
+                              onClick={() => removeItem(trip, it.id)}
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 active:bg-red-50 active:text-red-500"
+                            >
+                              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                <path fillRule="evenodd" d="M8.75 1a1 1 0 0 0-.96.71L7.42 3H4a1 1 0 0 0 0 2h.09l.76 10.66A2.5 2.5 0 0 0 7.34 18h5.32a2.5 2.5 0 0 0 2.49-2.34L15.91 5H16a1 1 0 1 0 0-2h-3.42l-.37-1.29A1 1 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" />
+                              </svg>
+                            </button>
                           </li>
                         ))}
+                        {trip.items.length === 0 && (
+                          <li className="py-3 text-center text-sm text-slate-400">
+                            상품이 없습니다
+                          </li>
+                        )}
                       </ul>
+
+                      <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
+                        <span className="text-sm font-medium text-slate-500">합계</span>
+                        <span className="text-base font-bold tabular-nums text-slate-900">
+                          {formatWon(trip.total)}
+                        </span>
+                      </div>
+
                       <button
                         onClick={() => {
                           if (window.confirm('이 쇼핑 기록을 삭제할까요?')) removeTrip(trip.id)
                         }}
                         className="mt-2 w-full rounded-xl py-2 text-sm font-medium text-red-500 active:bg-red-50"
                       >
-                        기록 삭제
+                        기록 전체 삭제
                       </button>
                     </div>
                   )}
@@ -108,6 +187,14 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
           </ul>
         )}
       </main>
+
+      {storeEditTrip && (
+        <StorePicker
+          current={storeEditTrip.store ?? ''}
+          onSelect={(name) => setTripStore(storeEditTrip.id, name)}
+          onClose={() => setStoreEditId(null)}
+        />
+      )}
     </div>
   )
 }

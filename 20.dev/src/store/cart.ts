@@ -30,6 +30,10 @@ interface CartState {
   finishShopping: () => ShoppingTrip | null
   /** 지난 기록 삭제 */
   removeTrip: (id: string) => void
+  /** 지난 기록의 마트 이름 수정 */
+  setTripStore: (id: string, store: string) => void
+  /** 지난 기록의 상품 목록 수정 (합계/개수 자동 재계산) */
+  updateTripItems: (id: string, items: Item[]) => void
 }
 
 function makeId(): string {
@@ -105,6 +109,27 @@ export const useCart = create<CartState>()(
       },
 
       removeTrip: (id) => set((state) => ({ trips: state.trips.filter((t) => t.id !== id) })),
+
+      setTripStore: (id, store) =>
+        set((state) => ({
+          trips: state.trips.map((t) =>
+            t.id === id ? { ...t, store: store.trim() || undefined } : t,
+          ),
+        })),
+
+      updateTripItems: (id, items) =>
+        set((state) => ({
+          trips: state.trips.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  items,
+                  total: items.reduce((sum, it) => sum + it.price * it.quantity, 0),
+                  itemCount: items.reduce((sum, it) => sum + it.quantity, 0),
+                }
+              : t,
+          ),
+        })),
     }),
     {
       name: 'pricecart-v1',
