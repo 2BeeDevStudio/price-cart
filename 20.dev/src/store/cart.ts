@@ -40,6 +40,12 @@ interface CartState {
   setTripStore: (id: string, store: string) => void
   /** 지난 기록의 상품 목록 수정 (합계/개수 자동 재계산) */
   updateTripItems: (id: string, items: Item[]) => void
+  /** 백업 불러오기 — 기록 병합(중복 id 제외), 카트 비었으면 복원. 새로 추가된 기록 수 반환 */
+  mergeImport: (payload: {
+    items?: Item[]
+    storeName?: string
+    trips?: ShoppingTrip[]
+  }) => number
 }
 
 function makeId(): string {
@@ -153,6 +159,28 @@ export const useCart = create<CartState>()(
               : t,
           ),
         })),
+
+      mergeImport: (payload) => {
+        let added = 0
+        set((state) => {
+          const existingIds = new Set(state.trips.map((t) => t.id))
+          const incoming = (payload.trips ?? []).filter(
+            (t) => t && typeof t.id === 'string' && !existingIds.has(t.id),
+          )
+          added = incoming.length
+          const trips = [...state.trips, ...incoming].sort((a, b) => b.date - a.date)
+          return {
+            trips,
+            // 현재 카트가 비어있을 때만 가져온 카트로 복원 (진행 중 카트 보호)
+            items:
+              state.items.length === 0 && Array.isArray(payload.items)
+                ? payload.items
+                : state.items,
+            storeName: state.storeName || payload.storeName || '',
+          }
+        })
+        return added
+      },
     }),
     {
       name: 'pricecart-v1',

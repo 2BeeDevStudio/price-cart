@@ -5,6 +5,7 @@ import { linePaid, lineOriginal, lineSavings, promoBadgeClass } from '../lib/pro
 import type { Item, PromoType, ShoppingTrip } from '../types'
 import StorePicker from './StorePicker'
 import ItemEditSheet from './ItemEditSheet'
+import BackupSheet from './BackupSheet'
 
 interface HistoryScreenProps {
   onClose: () => void
@@ -19,6 +20,7 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [storeEditId, setStoreEditId] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ tripId: string; item: Item } | null>(null)
+  const [backupOpen, setBackupOpen] = useState(false)
 
   const storeEditTrip = trips.find((t) => t.id === storeEditId) ?? null
 
@@ -68,6 +70,12 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
             </svg>
           </button>
           <span className="text-lg font-bold">지난 쇼핑 기록</span>
+          <button
+            onClick={() => setBackupOpen(true)}
+            className="ml-auto rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white active:bg-white/25"
+          >
+            백업 / 복원
+          </button>
         </div>
       </header>
 
@@ -249,6 +257,8 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
           onClose={() => setEditing(null)}
         />
       )}
+
+      {backupOpen && <BackupSheet onClose={() => setBackupOpen(false)} />}
     </div>
   )
 }
