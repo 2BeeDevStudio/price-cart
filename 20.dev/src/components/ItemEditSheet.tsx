@@ -6,10 +6,11 @@ import { PROMO_OPTIONS } from '../lib/promo'
 interface ItemEditSheetProps {
   item: Item
   onSave: (patch: { name: string; price: number; promo: PromoType | null }) => void
+  onDelete?: () => void
   onClose: () => void
 }
 
-export default function ItemEditSheet({ item, onSave, onClose }: ItemEditSheetProps) {
+export default function ItemEditSheet({ item, onSave, onDelete, onClose }: ItemEditSheetProps) {
   const [name, setName] = useState(item.name ?? '')
   const [price, setPrice] = useState(String(item.price))
   const [promo, setPromo] = useState<PromoType | null>(item.promo ?? null)
@@ -112,6 +113,18 @@ export default function ItemEditSheet({ item, onSave, onClose }: ItemEditSheetPr
               저장
             </button>
           </div>
+
+          {onDelete && (
+            <button
+              onClick={() => {
+                onDelete()
+                onClose()
+              }}
+              className="mt-3 w-full rounded-2xl py-3 text-sm font-semibold text-red-500 active:bg-red-50"
+            >
+              상품 삭제
+            </button>
+          )}
         </div>
       </div>
     </div>

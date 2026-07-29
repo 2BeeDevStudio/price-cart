@@ -76,13 +76,16 @@ export default function App() {
 
       {/* 하단 고정 버튼 */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20">
-        <div className="mx-auto max-w-md bg-gradient-to-t from-[#eef1f5] via-[#eef1f5] to-transparent px-5 pb-5 pt-10">
+        <div className="mx-auto max-w-md bg-gradient-to-t from-[#f5f1ec] via-[#f5f1ec] to-transparent px-5 pb-5 pt-10">
           {items.length > 0 && (
             <button
               onClick={handleFinish}
               className="mb-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-base font-bold text-slate-700 shadow-card active:bg-slate-50"
             >
-              🛒 쇼핑 끝 · 기록 저장
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-brand">
+                <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              쇼핑 끝 · 기록 저장
             </button>
           )}
           <button
