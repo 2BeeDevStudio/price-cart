@@ -8,8 +8,24 @@
 - Vite + React + TypeScript
 - Zustand (localStorage 영속화)
 - Tailwind CSS
-- Tesseract.js — 온디바이스 OCR (서버/API 불필요, 무료)
+- OCR (2단계):
+  - **Google Vision API** (기본, 정확도 우선) — 서버리스 함수 `api/ocr.js` 프록시 경유
+  - **Tesseract.js** (온디바이스, 오프라인/실패 시 자동 폴백)
 - 수동 Service Worker + manifest — 오프라인 & 홈 화면 설치(PWA)
+
+## OCR 동작 (하이브리드)
+
+- 온라인이면 사진을 `/api/ocr`(Vercel 서버리스)로 보내 Google Vision 으로 인식 → 정확도 높음.
+  API 키는 **서버 환경변수에만** 두고 클라이언트엔 노출하지 않는다.
+- 오프라인이거나 클라우드 호출이 실패하면 **Tesseract 온디바이스**로 자동 대체.
+- 두 엔진 모두 단어별 bounding box 를 활용해, 글자 크기·쉼표·위치로 대표 가격을 고른다
+  (상품번호·바코드·날짜·할인액 제외). 후보는 칩으로 보여줘 언제든 수정 가능.
+
+## 환경변수
+
+`api/ocr.js` 는 `GOOGLE_VISION_API_KEY` 를 사용한다. `.env.example` 참고.
+- 로컬: `vercel dev` 로 실행 시 `.env` 에서 로드 (또는 Vercel CLI 연동)
+- 배포: Vercel → Project Settings → Environment Variables 에 `GOOGLE_VISION_API_KEY` 등록
 
 ## 개발
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { recognizePrice } from '../lib/ocr'
+import { recognizePrice, type OcrEngine } from '../lib/ocr'
 import { formatWon, formatNumber } from '../lib/format'
 
 type Phase = 'capture' | 'processing' | 'review'
@@ -16,6 +16,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<number[]>([])
   const [price, setPrice] = useState('')
+  const [engine, setEngine] = useState<OcrEngine | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // 미리보기 objectURL 정리
@@ -35,7 +36,9 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setPhase('processing')
     setProgress(0)
     try {
+      // 온라인: 클라우드(Vision), 오프라인/실패: 온디바이스 자동 폴백
       const result = await recognizePrice(file, setProgress)
+      setEngine(result.engine)
       setCandidates(result.candidates.slice(0, 6))
       setPrice(result.best != null ? String(result.best) : '')
       setPhase('review')
@@ -59,6 +62,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setPhase('capture')
     setCandidates([])
     setPrice('')
+    setEngine(null)
     setError(null)
     fileRef.current?.click()
   }
@@ -140,10 +144,14 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
               )}
               <div className="text-base font-semibold text-slate-800">가격 인식 중…</div>
               <div className="mt-3 h-2 w-48 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-brand transition-all"
-                  style={{ width: `${Math.round(progress * 100)}%` }}
-                />
+                {progress > 0 ? (
+                  <div
+                    className="h-full rounded-full bg-brand transition-all"
+                    style={{ width: `${Math.round(progress * 100)}%` }}
+                  />
+                ) : (
+                  <div className="h-full w-2/5 rounded-full bg-brand animate-indeterminate" />
+                )}
               </div>
             </div>
           )}
@@ -158,9 +166,14 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                 />
               )}
 
-              <label className="mb-1 block text-sm font-medium text-slate-500">
-                인식된 가격
-              </label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-500">인식된 가격</label>
+                {engine === 'local' && (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+                    오프라인 · 기기 인식
+                  </span>
+                )}
+              </div>
               <div className="flex items-center rounded-2xl border-2 border-brand bg-white px-4 py-3">
                 <input
                   type="text"
