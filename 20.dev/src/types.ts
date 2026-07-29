@@ -9,3 +9,18 @@ export interface Item {
   /** 담은 시각 (epoch ms) */
   createdAt: number
 }
+
+/** '쇼핑 끝'으로 저장한 한 번의 쇼핑 기록 (스냅샷) */
+export interface ShoppingTrip {
+  id: string
+  /** 마트 이름 (선택) */
+  store?: string
+  /** 저장(완료) 시각 (epoch ms) */
+  date: number
+  /** 당시 담은 상품 목록 */
+  items: Item[]
+  /** 합계 금액 (스냅샷) */
+  total: number
+  /** 총 상품 개수 (수량 합, 스냅샷) */
+  itemCount: number
+}

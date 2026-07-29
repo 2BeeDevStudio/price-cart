@@ -1,9 +1,17 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Item } from '../types'
+import type { Item, ShoppingTrip } from '../types'
+
+/** 마트 프리셋 (칩) */
+export const STORE_PRESETS = ['코스트코', '이마트', '홈플러스', '다이소', '롯데마트', '편의점']
 
 interface CartState {
   items: Item[]
+  /** 현재 쇼핑의 마트 이름 */
+  storeName: string
+  /** '쇼핑 끝'으로 저장된 지난 기록들 (최신순) */
+  trips: ShoppingTrip[]
+
   /** 가격(+선택 상품명)을 받아 상품을 추가 (수량 1) */
   addItem: (price: number, name?: string) => void
   /** 수량을 절대값으로 설정 (1 미만이면 무시하지 않고 1로 보정) */
@@ -13,8 +21,15 @@ interface CartState {
   decQuantity: (id: string) => void
   /** 상품 삭제 */
   removeItem: (id: string) => void
-  /** 전체 비우기 (새 쇼핑 시작) */
+  /** 전체 비우기 (저장 없이 버림) */
   clearAll: () => void
+
+  /** 현재 쇼핑의 마트 이름 설정 */
+  setStore: (name: string) => void
+  /** 쇼핑 끝 — 현재 목록을 기록으로 저장하고 카트를 비운다. 저장된 기록 반환(비어있으면 null) */
+  finishShopping: () => ShoppingTrip | null
+  /** 지난 기록 삭제 */
+  removeTrip: (id: string) => void
 }
 
 function makeId(): string {
@@ -26,8 +41,10 @@ function makeId(): string {
 
 export const useCart = create<CartState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
+      storeName: '',
+      trips: [],
 
       addItem: (price, name) =>
         set((state) => ({
@@ -69,6 +86,25 @@ export const useCart = create<CartState>()(
         set((state) => ({ items: state.items.filter((it) => it.id !== id) })),
 
       clearAll: () => set({ items: [] }),
+
+      setStore: (name) => set({ storeName: name }),
+
+      finishShopping: () => {
+        const state = get()
+        if (state.items.length === 0) return null
+        const trip: ShoppingTrip = {
+          id: makeId(),
+          store: state.storeName.trim() || undefined,
+          date: Date.now(),
+          items: state.items,
+          total: state.items.reduce((sum, it) => sum + it.price * it.quantity, 0),
+          itemCount: state.items.reduce((sum, it) => sum + it.quantity, 0),
+        }
+        set({ items: [], storeName: '', trips: [trip, ...state.trips] })
+        return trip
+      },
+
+      removeTrip: (id) => set((state) => ({ trips: state.trips.filter((t) => t.id !== id) })),
     }),
     {
       name: 'pricecart-v1',

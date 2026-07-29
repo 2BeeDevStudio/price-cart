@@ -1,14 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCart } from './store/cart'
+import { formatDateKo } from './lib/format'
 import Header from './components/Header'
 import ItemRow from './components/ItemRow'
 import ScanModal from './components/ScanModal'
+import StorePicker from './components/StorePicker'
+import HistoryScreen from './components/HistoryScreen'
 
 export default function App() {
   const items = useCart((s) => s.items)
+  const storeName = useCart((s) => s.storeName)
   const addItem = useCart((s) => s.addItem)
   const clearAll = useCart((s) => s.clearAll)
+  const setStore = useCart((s) => s.setStore)
+  const finishShopping = useCart((s) => s.finishShopping)
+
   const [scanning, setScanning] = useState(false)
+  const [pickingStore, setPickingStore] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2500)
+    return () => clearTimeout(t)
+  }, [toast])
 
   function handleConfirm(price: number, name: string) {
     addItem(price, name)
@@ -16,22 +32,29 @@ export default function App() {
   }
 
   function handleReset() {
-    if (window.confirm('오늘 쇼핑 목록을 모두 비울까요?')) {
-      clearAll()
-    }
+    if (window.confirm('저장하지 않고 목록을 모두 비울까요?')) clearAll()
+  }
+
+  function handleFinish() {
+    const label = `${formatDateKo(Date.now())}${storeName ? ` (${storeName})` : ''}`
+    if (!window.confirm(`${label} 쇼핑을 기록에 저장할까요?`)) return
+    const trip = finishShopping()
+    if (trip) setToast('쇼핑이 저장됐어요 · 기록에서 확인')
   }
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
-      <Header onReset={handleReset} />
+      <Header
+        onReset={handleReset}
+        onPickStore={() => setPickingStore(true)}
+        onOpenHistory={() => setHistoryOpen(true)}
+      />
 
-      <main className="flex-1 pb-28">
+      <main className="flex-1 pb-40">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-8 py-24 text-center">
             <div className="mb-4 text-5xl">🛒</div>
-            <div className="text-base font-semibold text-slate-500">
-              담은 상품이 없어요
-            </div>
+            <div className="text-base font-semibold text-slate-500">담은 상품이 없어요</div>
             <p className="mt-1 text-sm text-slate-400">
               아래 버튼을 눌러 가격표를 촬영해 보세요.
             </p>
@@ -45,9 +68,17 @@ export default function App() {
         )}
       </main>
 
-      {/* 하단 고정 상품 추가 버튼 */}
+      {/* 하단 고정 버튼 */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20">
         <div className="mx-auto max-w-md bg-gradient-to-t from-slate-100 via-slate-100 to-transparent px-5 pb-4 pt-6">
+          {items.length > 0 && (
+            <button
+              onClick={handleFinish}
+              className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white text-base font-bold text-brand active:bg-brand/5"
+            >
+              🛒 쇼핑 끝 · 기록 저장
+            </button>
+          )}
           <button
             onClick={() => setScanning(true)}
             className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-lg shadow-brand/30 active:bg-brand-dark"
@@ -58,9 +89,26 @@ export default function App() {
         </div>
       </div>
 
+      {/* 토스트 */}
+      {toast && (
+        <div className="safe-bottom fixed inset-x-0 bottom-24 z-30 flex justify-center px-5">
+          <div className="rounded-full bg-slate-900/90 px-4 py-2 text-sm font-medium text-white shadow-lg">
+            {toast}
+          </div>
+        </div>
+      )}
+
       {scanning && (
         <ScanModal onClose={() => setScanning(false)} onConfirm={handleConfirm} />
       )}
+      {pickingStore && (
+        <StorePicker
+          current={storeName}
+          onSelect={setStore}
+          onClose={() => setPickingStore(false)}
+        />
+      )}
+      {historyOpen && <HistoryScreen onClose={() => setHistoryOpen(false)} />}
     </div>
   )
 }
