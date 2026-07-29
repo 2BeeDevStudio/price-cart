@@ -1,5 +1,6 @@
 import { recognizeCloud } from './ocrCloud'
 import { recognizeLocal } from './ocrLocal'
+import { guessProductName } from './priceParse'
 
 export type OcrEngine = 'cloud' | 'local'
 
@@ -8,6 +9,8 @@ export interface OcrResult {
   candidates: number[]
   /** 가장 유력한 후보 */
   best: number | null
+  /** 상품명 추측값 (없으면 '') */
+  nameGuess: string
   /** OCR 원문 */
   rawText: string
   /** 실제 사용된 엔진 */
@@ -28,12 +31,12 @@ export async function recognizePrice(
   if (online) {
     try {
       const r = await recognizeCloud(file)
-      return { ...r, engine: 'cloud' }
+      return { ...r, nameGuess: guessProductName(r.rawText), engine: 'cloud' }
     } catch (e) {
       console.warn('클라우드 OCR 실패 → 온디바이스로 대체:', e)
     }
   }
 
   const r = await recognizeLocal(file, onProgress)
-  return { ...r, engine: 'local' }
+  return { ...r, nameGuess: guessProductName(r.rawText), engine: 'local' }
 }

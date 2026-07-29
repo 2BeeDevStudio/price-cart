@@ -4,8 +4,8 @@ import type { Item } from '../types'
 
 interface CartState {
   items: Item[]
-  /** 가격을 받아 상품을 추가 (수량 1) */
-  addItem: (price: number) => void
+  /** 가격(+선택 상품명)을 받아 상품을 추가 (수량 1) */
+  addItem: (price: number, name?: string) => void
   /** 수량을 절대값으로 설정 (1 미만이면 무시하지 않고 1로 보정) */
   setQuantity: (id: string, quantity: number) => void
   /** 수량 +1 / -1 (1 미만으로는 내려가지 않음) */
@@ -29,12 +29,13 @@ export const useCart = create<CartState>()(
     (set) => ({
       items: [],
 
-      addItem: (price) =>
+      addItem: (price, name) =>
         set((state) => ({
           items: [
             // 최신 항목이 위로 오도록 앞에 추가
             {
               id: makeId(),
+              name: name?.trim() || undefined,
               price: Math.max(0, Math.round(price)),
               quantity: 1,
               createdAt: Date.now(),

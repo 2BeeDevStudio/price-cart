@@ -6,7 +6,7 @@ type Phase = 'capture' | 'processing' | 'review'
 
 interface ScanModalProps {
   onClose: () => void
-  onConfirm: (price: number) => void
+  onConfirm: (price: number, name: string) => void
 }
 
 export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
@@ -16,6 +16,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<number[]>([])
   const [price, setPrice] = useState('')
+  const [name, setName] = useState('')
   const [engine, setEngine] = useState<OcrEngine | null>(null)
   const [rawText, setRawText] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +42,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       const result = await recognizePrice(file, setProgress)
       setEngine(result.engine)
       setRawText(result.rawText)
+      setName(result.nameGuess)
       setCandidates(result.candidates.slice(0, 6))
       setPrice(result.best != null ? String(result.best) : '')
       setPhase('review')
@@ -64,6 +66,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setPhase('capture')
     setCandidates([])
     setPrice('')
+    setName('')
     setEngine(null)
     setRawText('')
     setError(null)
@@ -76,7 +79,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       setError('올바른 가격을 입력해 주세요.')
       return
     }
-    onConfirm(n)
+    onConfirm(n, name)
   }
 
   const parsedPreview = (() => {
@@ -168,6 +171,18 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                   className="mx-auto mb-4 max-h-36 rounded-xl object-contain"
                 />
               )}
+
+              {/* 상품명 (선택) */}
+              <label className="mb-1 block text-sm font-medium text-slate-500">
+                상품명 <span className="text-slate-300">(선택)</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="상품명 (없으면 비워두세요)"
+                className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-300 focus:border-brand"
+              />
 
               <div className="mb-1 flex items-center justify-between">
                 <label className="text-sm font-medium text-slate-500">인식된 가격</label>

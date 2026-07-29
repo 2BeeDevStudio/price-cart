@@ -94,6 +94,41 @@ export function candidatesFromWords(words: WordBox[]): number[] {
   return rankCandidates(cands)
 }
 
+/**
+ * OCR 원문에서 상품명을 추측한다 (가장 그럴듯한 한 줄).
+ *  - 가격/날짜/행사/단위 줄은 제외
+ *  - 한글이 많은 줄 우선, 그다음 글자 수가 많은 줄
+ *  - 확실치 않으면 빈 문자열 (사용자가 직접 입력/수정)
+ */
+export function guessProductName(text: string): string {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length >= 2)
+
+  const scored = lines
+    .map((l) => ({
+      l,
+      hangul: (l.match(/[가-힣]/g) ?? []).length,
+      letters: (l.match(/[A-Za-z]/g) ?? []).length,
+      digits: (l.match(/\d/g) ?? []).length,
+    }))
+    .filter(
+      (s) =>
+        // 가격/날짜/행사/할인 줄 제외.
+        // '원'은 "숫자 뒤 원"(=가격)일 때만 제외 — 상품명 속 원(원피스 등)은 유지
+        !/\d[\d,]*\s*원|₩\s*\d|%|할인|행사|정가|판매가|\d{4}\s*[./]\s*\d/.test(s.l) &&
+        // 글자(한글+영문)가 숫자보다 많아야 상품명일 확률 ↑
+        s.hangul + s.letters > s.digits,
+    )
+
+  if (scored.length === 0) return ''
+  scored.sort(
+    (a, b) => b.hangul - a.hangul || b.letters + b.hangul - (a.letters + a.hangul),
+  )
+  return scored[0].l.slice(0, 40)
+}
+
 /** 텍스트만 있을 때(위치정보 없음) 가격 후보 뽑기 — fallback */
 export function extractPriceCandidates(text: string): number[] {
   const matches = text.match(/-?\d{1,3}(?:,\d{3})+|-?\d+/g) ?? []

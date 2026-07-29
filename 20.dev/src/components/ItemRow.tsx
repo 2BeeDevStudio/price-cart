@@ -16,6 +16,9 @@ export default function ItemRow({ item }: ItemRowProps) {
   return (
     <li className="flex items-center gap-3 bg-white px-4 py-3">
       <div className="min-w-0 flex-1">
+        {item.name && (
+          <div className="truncate text-sm font-medium text-slate-500">{item.name}</div>
+        )}
         <div className="text-lg font-semibold text-slate-900 tabular-nums">
           {formatWon(item.price)}
         </div>

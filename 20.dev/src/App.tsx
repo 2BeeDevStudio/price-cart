@@ -10,8 +10,8 @@ export default function App() {
   const clearAll = useCart((s) => s.clearAll)
   const [scanning, setScanning] = useState(false)
 
-  function handleConfirm(price: number) {
-    addItem(price)
+  function handleConfirm(price: number, name: string) {
+    addItem(price, name)
     setScanning(false)
   }
 
