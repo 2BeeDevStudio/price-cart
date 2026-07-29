@@ -5,8 +5,10 @@ export interface Item {
   id: string
   /** 상품명 (선택). OCR 추측값 또는 사용자 입력 */
   name?: string
-  /** 단가 (원). 쉼표 제거 후 정수로 저장 */
+  /** 판매가 (실제 결제 단가, 원) */
   price: number
+  /** 정가 (할인 전 가격, 선택). price보다 클 때만 할인으로 간주 */
+  originalPrice?: number
   /** 수량 (최소 1) */
   quantity: number
   /** 행사 유형 (선택). 결제 금액 계산에 반영됨 */

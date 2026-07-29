@@ -31,8 +31,13 @@ export default function App() {
     return () => clearTimeout(t)
   }, [toast])
 
-  function handleConfirm(price: number, name: string, promo: PromoType | null) {
-    addItem(price, name, promo ?? undefined)
+  function handleConfirm(
+    price: number,
+    name: string,
+    promo: PromoType | null,
+    originalPrice: number | null,
+  ) {
+    addItem(price, name, promo ?? undefined, originalPrice ?? undefined)
     setScanning(false)
   }
 

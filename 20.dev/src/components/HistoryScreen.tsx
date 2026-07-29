@@ -27,20 +27,24 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
   function saveItem(
     tripId: string,
     itemId: string,
-    patch: { name: string; price: number; promo: PromoType | null },
+    patch: { name: string; price: number; promo: PromoType | null; originalPrice: number | null },
   ) {
     const trip = trips.find((t) => t.id === tripId)
     if (!trip) return
-    const items = trip.items.map((it) =>
-      it.id === itemId
-        ? {
-            ...it,
-            name: patch.name.trim() || undefined,
-            price: Math.max(0, Math.round(patch.price)),
-            promo: patch.promo ?? undefined,
-          }
-        : it,
-    )
+    const items = trip.items.map((it) => {
+      if (it.id !== itemId) return it
+      const p = Math.max(0, Math.round(patch.price))
+      return {
+        ...it,
+        name: patch.name.trim() || undefined,
+        price: p,
+        promo: patch.promo ?? undefined,
+        originalPrice:
+          patch.originalPrice != null && patch.originalPrice > p
+            ? Math.round(patch.originalPrice)
+            : undefined,
+      }
+    })
     updateTripItems(tripId, items)
   }
 

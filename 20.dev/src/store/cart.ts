@@ -15,17 +15,22 @@ interface CartState {
   /** '쇼핑 끝'으로 저장된 지난 기록들 (최신순) */
   trips: ShoppingTrip[]
 
-  /** 가격(+선택 상품명·행사)을 받아 상품을 추가 (수량 1) */
-  addItem: (price: number, name?: string, promo?: PromoType) => void
+  /** 가격(+선택 상품명·행사·정가)을 받아 상품을 추가 (수량 1) */
+  addItem: (price: number, name?: string, promo?: PromoType, originalPrice?: number) => void
   /** 수량을 절대값으로 설정 (1 미만이면 무시하지 않고 1로 보정) */
   setQuantity: (id: string, quantity: number) => void
   /** 수량 +1 / -1 (1 미만으로는 내려가지 않음) */
   incQuantity: (id: string) => void
   decQuantity: (id: string) => void
-  /** 상품명/가격/행사 수정 (promo: null 이면 일반으로 해제) */
+  /** 상품명/가격/행사/정가 수정 (promo·originalPrice: null 이면 해제) */
   updateItem: (
     id: string,
-    patch: { name?: string; price?: number; promo?: PromoType | null },
+    patch: {
+      name?: string
+      price?: number
+      promo?: PromoType | null
+      originalPrice?: number | null
+    },
   ) => void
   /** 상품 삭제 */
   removeItem: (id: string) => void
@@ -67,21 +72,26 @@ export const useCart = create<CartState>()(
       budget: null,
       trips: [],
 
-      addItem: (price, name, promo) =>
-        set((state) => ({
-          items: [
-            // 최신 항목이 위로 오도록 앞에 추가
-            {
-              id: makeId(),
-              name: name?.trim() || undefined,
-              price: Math.max(0, Math.round(price)),
-              quantity: 1,
-              promo,
-              createdAt: Date.now(),
-            },
-            ...state.items,
-          ],
-        })),
+      addItem: (price, name, promo, originalPrice) =>
+        set((state) => {
+          const p = Math.max(0, Math.round(price))
+          const orig = originalPrice != null ? Math.round(originalPrice) : undefined
+          return {
+            items: [
+              // 최신 항목이 위로 오도록 앞에 추가
+              {
+                id: makeId(),
+                name: name?.trim() || undefined,
+                price: p,
+                originalPrice: orig && orig > p ? orig : undefined,
+                quantity: 1,
+                promo,
+                createdAt: Date.now(),
+              },
+              ...state.items,
+            ],
+          }
+        }),
 
       setQuantity: (id, quantity) =>
         set((state) => ({
@@ -106,16 +116,19 @@ export const useCart = create<CartState>()(
 
       updateItem: (id, patch) =>
         set((state) => ({
-          items: state.items.map((it) =>
-            it.id === id
-              ? {
-                  ...it,
-                  ...(patch.name !== undefined ? { name: patch.name.trim() || undefined } : {}),
-                  ...(patch.price !== undefined ? { price: Math.max(0, Math.round(patch.price)) } : {}),
-                  ...(patch.promo !== undefined ? { promo: patch.promo ?? undefined } : {}),
-                }
-              : it,
-          ),
+          items: state.items.map((it) => {
+            if (it.id !== id) return it
+            const next = { ...it }
+            if (patch.name !== undefined) next.name = patch.name.trim() || undefined
+            if (patch.price !== undefined) next.price = Math.max(0, Math.round(patch.price))
+            if (patch.promo !== undefined) next.promo = patch.promo ?? undefined
+            if (patch.originalPrice !== undefined)
+              next.originalPrice =
+                patch.originalPrice != null && patch.originalPrice > next.price
+                  ? Math.round(patch.originalPrice)
+                  : undefined
+            return next
+          }),
         })),
 
       removeItem: (id) =>

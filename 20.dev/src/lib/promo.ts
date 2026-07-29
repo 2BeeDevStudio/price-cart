@@ -23,18 +23,22 @@ export function freeUnits(quantity: number, promo?: PromoType): number {
   return quantity - paidUnits(quantity, promo)
 }
 
-/** 할인 전 금액 (단가 × 수량) */
-export function lineOriginal(item: Pick<Item, 'price' | 'quantity'>): number {
-  return item.price * item.quantity
+/** 할인 전 금액 (정가 있으면 정가 기준 × 수량) */
+export function lineOriginal(item: Pick<Item, 'price' | 'quantity' | 'originalPrice'>): number {
+  const base =
+    item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price
+  return base * item.quantity
 }
 
-/** 실제 결제 금액 (행사 반영) */
+/** 실제 결제 금액 (판매가 × 행사 반영 개수) */
 export function linePaid(item: Pick<Item, 'price' | 'quantity' | 'promo'>): number {
   return item.price * paidUnits(item.quantity, item.promo)
 }
 
-/** 이 상품에서 아낀 금액 */
-export function lineSavings(item: Pick<Item, 'price' | 'quantity' | 'promo'>): number {
+/** 이 상품에서 아낀 금액 (정가 할인 + 행사 무료분 합산) */
+export function lineSavings(
+  item: Pick<Item, 'price' | 'quantity' | 'promo' | 'originalPrice'>,
+): number {
   return lineOriginal(item) - linePaid(item)
 }
 

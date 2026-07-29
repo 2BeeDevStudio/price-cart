@@ -8,7 +8,12 @@ type Phase = 'capture' | 'processing' | 'review'
 
 interface ScanModalProps {
   onClose: () => void
-  onConfirm: (price: number, name: string, promo: PromoType | null) => void
+  onConfirm: (
+    price: number,
+    name: string,
+    promo: PromoType | null,
+    originalPrice: number | null,
+  ) => void
 }
 
 export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
@@ -20,6 +25,8 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [price, setPrice] = useState('')
   const [name, setName] = useState('')
   const [promo, setPromo] = useState<PromoType | null>(null)
+  const [showDiscount, setShowDiscount] = useState(false)
+  const [original, setOriginal] = useState('')
   const [engine, setEngine] = useState<OcrEngine | null>(null)
   const [rawText, setRawText] = useState('')
   const [cloudError, setCloudError] = useState<string | undefined>(undefined)
@@ -74,6 +81,8 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setPrice('')
     setName('')
     setPromo(null)
+    setShowDiscount(false)
+    setOriginal('')
     setEngine(null)
     setRawText('')
     setCloudError(undefined)
@@ -82,13 +91,28 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     fileRef.current?.click()
   }
 
+  function toggleDiscount() {
+    setShowDiscount((v) => {
+      const next = !v
+      // 켤 때 정가가 비어있으면 '가장 큰 후보(>판매가)'로 자동 프리필
+      if (next && !original.trim()) {
+        const p = parseInt(price.replace(/[^\d]/g, ''), 10)
+        const bigger = candidates.filter((c) => c > (p || 0))
+        if (bigger.length) setOriginal(String(Math.max(...bigger)))
+      }
+      return next
+    })
+  }
+
   function confirm() {
     const n = parseInt(price.replace(/[^\d]/g, ''), 10)
     if (!Number.isFinite(n) || n <= 0) {
       setError('올바른 가격을 입력해 주세요.')
       return
     }
-    onConfirm(n, name, promo)
+    const o = parseInt(original.replace(/[^\d]/g, ''), 10)
+    const originalPrice = showDiscount && Number.isFinite(o) && o > n ? o : null
+    onConfirm(n, name, promo, originalPrice)
   }
 
   const parsedPreview = (() => {
@@ -311,6 +335,50 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                     )
                   })}
                 </div>
+              </div>
+
+              {/* 할인 (정가 입력) */}
+              <div className="mt-4">
+                <button
+                  onClick={toggleDiscount}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ${
+                    showDiscount ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                  }`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                    <path d="M9 15l6-6M9.5 9.5h.01M14.5 14.5h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  할인 상품 (정가 입력)
+                </button>
+                {showDiscount && (
+                  <div className="mt-2">
+                    <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={original}
+                        onChange={(e) => setOriginal(e.target.value.replace(/[^\d,]/g, ''))}
+                        placeholder="정가 (할인 전 가격)"
+                        className="w-full bg-transparent text-lg font-bold tabular-nums text-slate-900 outline-none placeholder:text-base placeholder:font-normal placeholder:text-slate-300"
+                      />
+                      <span className="ml-2 text-base font-bold text-slate-400">원</span>
+                    </div>
+                    {candidates.length > 1 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {candidates.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setOriginal(String(c))}
+                            className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium tabular-nums text-slate-700 active:bg-slate-200"
+                          >
+                            {formatNumber(c)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {error && <div className="mt-3 text-sm text-red-500">{error}</div>}
