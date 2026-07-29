@@ -57,22 +57,22 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-slate-100">
-      <header className="safe-top sticky top-0 z-10 bg-brand text-white shadow-md">
-        <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-4">
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#eef1f5]">
+      <header className="safe-top sticky top-0 z-10 bg-[#eef1f5]/85 backdrop-blur">
+        <div className="mx-auto flex max-w-md items-center gap-3 px-5 py-3.5">
           <button
             onClick={onClose}
             aria-label="뒤로"
-            className="flex h-9 w-9 items-center justify-center rounded-full active:bg-white/15"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-600 shadow-card active:bg-slate-50"
           >
-            <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
               <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <span className="text-lg font-bold">지난 쇼핑 기록</span>
+          <span className="text-lg font-bold text-slate-900">지난 쇼핑 기록</span>
           <button
             onClick={() => setBackupOpen(true)}
-            className="ml-auto rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white active:bg-white/25"
+            className="ml-auto rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 shadow-card active:bg-slate-50"
           >
             백업 / 복원
           </button>
@@ -81,9 +81,9 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
 
       <main className="mx-auto w-full max-w-md flex-1 overflow-y-auto overscroll-contain p-4">
         {trips.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="mt-4 flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-16 text-center shadow-card">
             <div className="mb-4 text-5xl">🧾</div>
-            <div className="text-base font-semibold text-slate-500">저장된 쇼핑이 없어요</div>
+            <div className="text-base font-bold text-slate-600">저장된 쇼핑이 없어요</div>
             <p className="mt-1 text-sm text-slate-400">
               상품을 담고 "쇼핑 끝"을 누르면 여기에 기록돼요.
             </p>
@@ -93,7 +93,7 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
             {trips.map((trip) => {
               const open = expanded === trip.id
               return (
-                <li key={trip.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <li key={trip.id} className="overflow-hidden rounded-2xl bg-white shadow-card">
                   <button
                     onClick={() => setExpanded(open ? null : trip.id)}
                     className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-slate-50"
