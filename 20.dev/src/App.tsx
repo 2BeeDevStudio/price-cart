@@ -6,6 +6,7 @@ import Header from './components/Header'
 import ItemRow from './components/ItemRow'
 import ScanModal from './components/ScanModal'
 import StorePicker from './components/StorePicker'
+import BudgetSheet from './components/BudgetSheet'
 import HistoryScreen from './components/HistoryScreen'
 
 export default function App() {
@@ -14,10 +15,13 @@ export default function App() {
   const addItem = useCart((s) => s.addItem)
   const clearAll = useCart((s) => s.clearAll)
   const setStore = useCart((s) => s.setStore)
+  const budget = useCart((s) => s.budget)
+  const setBudget = useCart((s) => s.setBudget)
   const finishShopping = useCart((s) => s.finishShopping)
 
   const [scanning, setScanning] = useState(false)
   const [pickingStore, setPickingStore] = useState(false)
+  const [budgetOpen, setBudgetOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -49,6 +53,7 @@ export default function App() {
         onReset={handleReset}
         onPickStore={() => setPickingStore(true)}
         onOpenHistory={() => setHistoryOpen(true)}
+        onEditBudget={() => setBudgetOpen(true)}
       />
 
       <main className="flex-1 px-5 pb-44 pt-5">
@@ -107,6 +112,13 @@ export default function App() {
           current={storeName}
           onSelect={setStore}
           onClose={() => setPickingStore(false)}
+        />
+      )}
+      {budgetOpen && (
+        <BudgetSheet
+          current={budget}
+          onSave={setBudget}
+          onClose={() => setBudgetOpen(false)}
         />
       )}
       {historyOpen && <HistoryScreen onClose={() => setHistoryOpen(false)} />}

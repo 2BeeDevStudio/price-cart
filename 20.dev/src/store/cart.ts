@@ -10,6 +10,8 @@ interface CartState {
   items: Item[]
   /** 현재 쇼핑의 마트 이름 */
   storeName: string
+  /** 현재 쇼핑의 예산 (null = 미설정) */
+  budget: number | null
   /** '쇼핑 끝'으로 저장된 지난 기록들 (최신순) */
   trips: ShoppingTrip[]
 
@@ -32,6 +34,8 @@ interface CartState {
 
   /** 현재 쇼핑의 마트 이름 설정 */
   setStore: (name: string) => void
+  /** 현재 쇼핑의 예산 설정 (null = 해제) */
+  setBudget: (budget: number | null) => void
   /** 쇼핑 끝 — 현재 목록을 기록으로 저장하고 카트를 비운다. 저장된 기록 반환(비어있으면 null) */
   finishShopping: () => ShoppingTrip | null
   /** 지난 기록 삭제 */
@@ -60,6 +64,7 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       items: [],
       storeName: '',
+      budget: null,
       trips: [],
 
       addItem: (price, name, promo) =>
@@ -120,6 +125,8 @@ export const useCart = create<CartState>()(
 
       setStore: (name) => set({ storeName: name }),
 
+      setBudget: (budget) => set({ budget }),
+
       finishShopping: () => {
         const state = get()
         if (state.items.length === 0) return null
@@ -129,10 +136,11 @@ export const useCart = create<CartState>()(
           date: Date.now(),
           items: state.items,
           total: state.items.reduce((sum, it) => sum + linePaid(it), 0),
+          budget: state.budget ?? undefined,
           savings: state.items.reduce((sum, it) => sum + lineSavings(it), 0),
           itemCount: state.items.reduce((sum, it) => sum + it.quantity, 0),
         }
-        set({ items: [], storeName: '', trips: [trip, ...state.trips] })
+        set({ items: [], storeName: '', budget: null, trips: [trip, ...state.trips] })
         return trip
       },
 

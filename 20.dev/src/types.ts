@@ -26,6 +26,8 @@ export interface ShoppingTrip {
   items: Item[]
   /** 실제 결제 합계 (행사 반영, 스냅샷) */
   total: number
+  /** 이 쇼핑의 예산 (선택, 스냅샷) */
+  budget?: number
   /** 행사로 아낀 총 금액 (스냅샷) */
   savings?: number
   /** 총 상품 개수 (수량 합, 스냅샷) */

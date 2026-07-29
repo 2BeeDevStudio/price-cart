@@ -5,14 +5,27 @@ interface HeaderProps {
   onReset: () => void
   onPickStore: () => void
   onOpenHistory: () => void
+  onEditBudget: () => void
 }
 
-export default function Header({ onReset, onPickStore, onOpenHistory }: HeaderProps) {
+export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudget }: HeaderProps) {
   const total = useCart(selectTotal)
   const count = useCart(selectCount)
   const savings = useCart(selectSavings)
+  const budget = useCart((s) => s.budget)
   const storeName = useCart((s) => s.storeName)
   const hasItems = useCart((s) => s.items.length > 0)
+
+  const remaining = budget != null ? budget - total : 0
+  const over = budget != null && remaining < 0
+  const near = budget != null && !over && total >= budget * 0.9
+  const pct = budget != null && budget > 0 ? Math.min(100, Math.round((total / budget) * 100)) : 0
+  const barColor = over ? 'bg-red-400' : near ? 'bg-amber-400' : 'bg-brand'
+  const remainColor = over
+    ? 'text-red-300'
+    : near
+      ? 'text-amber-300'
+      : 'text-brand-light'
 
   return (
     <div className="safe-top px-5 pt-5">
@@ -81,6 +94,28 @@ export default function Header({ onReset, onPickStore, onOpenHistory }: HeaderPr
               </span>
             )}
           </div>
+
+          {/* 예산 */}
+          {budget != null ? (
+            <button onClick={onEditBudget} className="mt-4 block w-full text-left">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs tabular-nums">
+                <span className="text-white/50">예산 {formatWon(budget)}</span>
+                <span className={`font-semibold ${remainColor}`}>
+                  {over ? `${formatWon(-remaining)} 초과` : `남은 ${formatWon(remaining)}`}
+                </span>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={onEditBudget}
+              className="mt-4 inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70 active:bg-white/20"
+            >
+              <span className="text-sm leading-none">＋</span> 예산 설정
+            </button>
+          )}
         </div>
       </div>
     </div>

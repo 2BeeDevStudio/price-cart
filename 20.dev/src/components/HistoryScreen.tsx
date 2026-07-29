@@ -224,6 +224,19 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
                           🟢 {formatWon(trip.savings)} 절약
                         </div>
                       )}
+                      {trip.budget != null && (
+                        <div className="mt-0.5 text-right text-xs font-medium tabular-nums">
+                          {trip.total <= trip.budget ? (
+                            <span className="text-emerald-600">
+                              예산 {formatWon(trip.budget)} 내 · {formatWon(trip.budget - trip.total)} 남김
+                            </span>
+                          ) : (
+                            <span className="text-red-500">
+                              예산 {formatWon(trip.budget)} · {formatWon(trip.total - trip.budget)} 초과
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <button
                         onClick={() => {
