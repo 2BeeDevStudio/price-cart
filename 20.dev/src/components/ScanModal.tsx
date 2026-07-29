@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { recognizePrice, type OcrEngine } from '../lib/ocr'
 import { formatWon, formatNumber } from '../lib/format'
+import { PROMO_OPTIONS } from '../lib/promo'
+import type { PromoType } from '../types'
 
 type Phase = 'capture' | 'processing' | 'review'
 
 interface ScanModalProps {
   onClose: () => void
-  onConfirm: (price: number, name: string) => void
+  onConfirm: (price: number, name: string, promo: PromoType | null) => void
 }
 
 export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
@@ -17,6 +19,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [candidates, setCandidates] = useState<number[]>([])
   const [price, setPrice] = useState('')
   const [name, setName] = useState('')
+  const [promo, setPromo] = useState<PromoType | null>(null)
   const [engine, setEngine] = useState<OcrEngine | null>(null)
   const [rawText, setRawText] = useState('')
   const [cloudError, setCloudError] = useState<string | undefined>(undefined)
@@ -70,6 +73,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setCandidates([])
     setPrice('')
     setName('')
+    setPromo(null)
     setEngine(null)
     setRawText('')
     setCloudError(undefined)
@@ -84,7 +88,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       setError('올바른 가격을 입력해 주세요.')
       return
     }
-    onConfirm(n, name)
+    onConfirm(n, name, promo)
   }
 
   const parsedPreview = (() => {
@@ -287,6 +291,27 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                   </div>
                 </div>
               )}
+
+              {/* 행사 선택 */}
+              <div className="mt-4">
+                <div className="mb-1.5 text-sm font-medium text-slate-500">행사</div>
+                <div className="flex gap-2">
+                  {PROMO_OPTIONS.map((opt) => {
+                    const active = promo === opt.value
+                    return (
+                      <button
+                        key={opt.label}
+                        onClick={() => setPromo(opt.value)}
+                        className={`flex-1 rounded-2xl py-2.5 text-sm font-semibold ${
+                          active ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
               {error && <div className="mt-3 text-sm text-red-500">{error}</div>}
 

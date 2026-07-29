@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Item } from '../types'
 import { useCart } from '../store/cart'
 import { formatWon, formatNumber } from '../lib/format'
+import { linePaid, lineOriginal, lineSavings, freeUnits, promoBadgeClass } from '../lib/promo'
 import ItemEditSheet from './ItemEditSheet'
 
 interface ItemRowProps {
@@ -15,29 +16,43 @@ export default function ItemRow({ item }: ItemRowProps) {
   const updateItem = useCart((s) => s.updateItem)
   const [editing, setEditing] = useState(false)
 
-  const lineTotal = item.price * item.quantity
+  const paid = linePaid(item)
+  const savings = lineSavings(item)
+  const free = freeUnits(item.quantity, item.promo)
 
   return (
     <li className="flex items-center gap-3 bg-white px-4 py-3">
-      {/* 탭하면 상품명/가격 수정 */}
+      {/* 탭하면 상품명/가격/행사 수정 */}
       <button
         onClick={() => setEditing(true)}
         className="min-w-0 flex-1 text-left active:opacity-60"
       >
-        {item.name && (
-          <div className="truncate text-sm font-medium text-slate-500">{item.name}</div>
-        )}
-        <div className="flex items-center gap-1 text-lg font-semibold text-slate-900 tabular-nums">
-          {formatWon(item.price)}
+        <div className="flex items-center gap-1.5">
+          {item.name && (
+            <span className="truncate text-sm font-medium text-slate-500">{item.name}</span>
+          )}
+          {item.promo && (
+            <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${promoBadgeClass(item.promo)}`}>
+              {item.promo}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 text-lg font-semibold text-slate-900 tabular-nums">
+          {formatWon(paid)}
+          {savings > 0 && (
+            <span className="text-sm font-normal text-slate-400 line-through">
+              {formatWon(lineOriginal(item))}
+            </span>
+          )}
           <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 text-slate-300">
             <path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        {item.quantity > 1 && (
-          <div className="text-xs text-slate-400 tabular-nums">
-            {formatNumber(item.price)} × {item.quantity} = {formatWon(lineTotal)}
-          </div>
-        )}
+        <div className="text-xs tabular-nums text-slate-400">
+          {item.quantity > 1 && <span>{formatNumber(item.price)} × {item.quantity}</span>}
+          {free > 0 && <span className="text-emerald-600"> · {free}개 무료</span>}
+          {savings > 0 && <span className="text-emerald-600"> · {formatWon(savings)} 절약</span>}
+        </div>
       </button>
 
       {/* 수량 스텝퍼 */}

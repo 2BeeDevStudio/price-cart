@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useCart } from './store/cart'
 import { formatDateKo } from './lib/format'
+import type { PromoType } from './types'
 import Header from './components/Header'
 import ItemRow from './components/ItemRow'
 import ScanModal from './components/ScanModal'
@@ -26,8 +27,8 @@ export default function App() {
     return () => clearTimeout(t)
   }, [toast])
 
-  function handleConfirm(price: number, name: string) {
-    addItem(price, name)
+  function handleConfirm(price: number, name: string, promo: PromoType | null) {
+    addItem(price, name, promo ?? undefined)
     setScanning(false)
   }
 

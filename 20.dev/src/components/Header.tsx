@@ -1,4 +1,4 @@
-import { useCart, selectTotal, selectCount } from '../store/cart'
+import { useCart, selectTotal, selectCount, selectSavings } from '../store/cart'
 import { formatWon } from '../lib/format'
 
 interface HeaderProps {
@@ -10,6 +10,7 @@ interface HeaderProps {
 export default function Header({ onReset, onPickStore, onOpenHistory }: HeaderProps) {
   const total = useCart(selectTotal)
   const count = useCart(selectCount)
+  const savings = useCart(selectSavings)
   const storeName = useCart((s) => s.storeName)
   const hasItems = useCart((s) => s.items.length > 0)
 
@@ -56,7 +57,14 @@ export default function Header({ onReset, onPickStore, onOpenHistory }: HeaderPr
           <div className="mt-1 text-4xl font-bold tracking-tight tabular-nums">
             {formatWon(total)}
           </div>
-          <div className="mt-1 text-sm text-white/70 tabular-nums">상품 {count}개</div>
+          <div className="mt-1 flex items-center gap-2 text-sm text-white/70 tabular-nums">
+            <span>상품 {count}개</span>
+            {savings > 0 && (
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold text-white">
+                🟢 {formatWon(savings)} 절약
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </header>

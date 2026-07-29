@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import type { Item } from '../types'
+import type { Item, PromoType } from '../types'
 import { formatWon } from '../lib/format'
+import { PROMO_OPTIONS } from '../lib/promo'
 
 interface ItemEditSheetProps {
   item: Item
-  onSave: (patch: { name: string; price: number }) => void
+  onSave: (patch: { name: string; price: number; promo: PromoType | null }) => void
   onClose: () => void
 }
 
 export default function ItemEditSheet({ item, onSave, onClose }: ItemEditSheetProps) {
   const [name, setName] = useState(item.name ?? '')
   const [price, setPrice] = useState(String(item.price))
+  const [promo, setPromo] = useState<PromoType | null>(item.promo ?? null)
   const [error, setError] = useState<string | null>(null)
 
   const parsed = parseInt(price.replace(/[^\d]/g, ''), 10)
@@ -21,7 +23,7 @@ export default function ItemEditSheet({ item, onSave, onClose }: ItemEditSheetPr
       setError('올바른 가격을 입력해 주세요.')
       return
     }
-    onSave({ name, price: parsed })
+    onSave({ name, price: parsed, promo })
     onClose()
   }
 
@@ -77,6 +79,24 @@ export default function ItemEditSheet({ item, onSave, onClose }: ItemEditSheetPr
             <div className="mt-1 text-right text-sm text-slate-400 tabular-nums">{preview}</div>
           )}
           {error && <div className="mt-2 text-sm text-red-500">{error}</div>}
+
+          <label className="mb-1 mt-4 block text-sm font-medium text-slate-500">행사</label>
+          <div className="flex gap-2">
+            {PROMO_OPTIONS.map((opt) => {
+              const active = promo === opt.value
+              return (
+                <button
+                  key={opt.label}
+                  onClick={() => setPromo(opt.value)}
+                  className={`flex-1 rounded-2xl py-2.5 text-sm font-semibold ${
+                    active ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
 
           <div className="mt-5 flex gap-3">
             <button

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useCart } from '../store/cart'
 import { formatWon, formatDateKo } from '../lib/format'
-import type { Item, ShoppingTrip } from '../types'
+import { linePaid, lineOriginal, lineSavings, promoBadgeClass } from '../lib/promo'
+import type { Item, PromoType, ShoppingTrip } from '../types'
 import StorePicker from './StorePicker'
 import ItemEditSheet from './ItemEditSheet'
 
@@ -21,12 +22,21 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
 
   const storeEditTrip = trips.find((t) => t.id === storeEditId) ?? null
 
-  function saveItem(tripId: string, itemId: string, patch: { name: string; price: number }) {
+  function saveItem(
+    tripId: string,
+    itemId: string,
+    patch: { name: string; price: number; promo: PromoType | null },
+  ) {
     const trip = trips.find((t) => t.id === tripId)
     if (!trip) return
     const items = trip.items.map((it) =>
       it.id === itemId
-        ? { ...it, name: patch.name.trim() || undefined, price: Math.max(0, Math.round(patch.price)) }
+        ? {
+            ...it,
+            name: patch.name.trim() || undefined,
+            price: Math.max(0, Math.round(patch.price)),
+            promo: patch.promo ?? undefined,
+          }
         : it,
     )
     updateTripItems(tripId, items)
@@ -130,12 +140,24 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
                               onClick={() => setEditing({ tripId: trip.id, item: it })}
                               className="min-w-0 flex-1 text-left active:opacity-60"
                             >
-                              {it.name && (
-                                <div className="truncate text-xs text-slate-400">{it.name}</div>
-                              )}
-                              <div className="flex items-center gap-1 text-sm font-medium tabular-nums text-slate-700">
-                                {formatWon(it.price * it.quantity)}
-                                {it.quantity > 1 && (
+                              <div className="flex items-center gap-1.5">
+                                {it.name && (
+                                  <span className="truncate text-xs text-slate-400">{it.name}</span>
+                                )}
+                                {it.promo && (
+                                  <span className={`rounded px-1 py-0.5 text-[10px] font-bold ${promoBadgeClass(it.promo)}`}>
+                                    {it.promo}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-sm font-medium tabular-nums text-slate-700">
+                                {formatWon(linePaid(it))}
+                                {lineSavings(it) > 0 && (
+                                  <span className="text-xs font-normal text-slate-400 line-through">
+                                    {formatWon(lineOriginal(it))}
+                                  </span>
+                                )}
+                                {it.quantity > 1 && lineSavings(it) === 0 && (
                                   <span className="text-xs font-normal text-slate-400">
                                     ({formatWon(it.price)}×{it.quantity})
                                   </span>
@@ -189,6 +211,11 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
                           {formatWon(trip.total)}
                         </span>
                       </div>
+                      {trip.savings != null && trip.savings > 0 && (
+                        <div className="mt-0.5 text-right text-xs font-medium text-emerald-600 tabular-nums">
+                          🟢 {formatWon(trip.savings)} 절약
+                        </div>
+                      )}
 
                       <button
                         onClick={() => {
