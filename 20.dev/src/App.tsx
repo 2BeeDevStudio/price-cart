@@ -51,17 +51,17 @@ export default function App() {
         onOpenHistory={() => setHistoryOpen(true)}
       />
 
-      <main className="flex-1 pb-40">
+      <main className="flex-1 px-5 pb-44 pt-5">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-8 py-24 text-center">
+          <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-20 text-center shadow-card">
             <div className="mb-4 text-5xl">🛒</div>
-            <div className="text-base font-semibold text-slate-500">담은 상품이 없어요</div>
+            <div className="text-base font-bold text-slate-600">담은 상품이 없어요</div>
             <p className="mt-1 text-sm text-slate-400">
               아래 버튼을 눌러 가격표를 촬영해 보세요.
             </p>
           </div>
         ) : (
-          <ul className="mt-3 divide-y divide-slate-100 overflow-hidden">
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-3xl bg-white shadow-card">
             {items.map((item) => (
               <ItemRow key={item.id} item={item} />
             ))}
@@ -71,18 +71,18 @@ export default function App() {
 
       {/* 하단 고정 버튼 */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20">
-        <div className="mx-auto max-w-md bg-gradient-to-t from-slate-100 via-slate-100 to-transparent px-5 pb-4 pt-6">
+        <div className="mx-auto max-w-md bg-gradient-to-t from-[#eef1f5] via-[#eef1f5] to-transparent px-5 pb-5 pt-10">
           {items.length > 0 && (
             <button
               onClick={handleFinish}
-              className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white text-base font-bold text-brand active:bg-brand/5"
+              className="mb-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-base font-bold text-slate-700 shadow-card active:bg-slate-50"
             >
               🛒 쇼핑 끝 · 기록 저장
             </button>
           )}
           <button
             onClick={() => setScanning(true)}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-lg shadow-brand/30 active:bg-brand-dark"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-hero active:bg-brand-dark"
           >
             <span className="text-2xl leading-none">＋</span>
             상품 추가
