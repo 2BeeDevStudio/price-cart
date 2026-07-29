@@ -56,10 +56,14 @@ export default function Header({ onReset, onPickStore, onOpenHistory }: HeaderPr
         </div>
       </div>
 
-      {/* 다크 히어로 카드 */}
-      <div className="relative mt-4 overflow-hidden rounded-[28px] bg-ink px-6 py-6 text-white shadow-hero">
-        <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-brand/40 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+      {/* 다크 히어로 카드 (글로우는 배경 그라디언트로 — 모서리 삐침 방지) */}
+      <div
+        className="relative mt-4 overflow-hidden rounded-[28px] bg-ink px-6 py-6 text-white shadow-hero"
+        style={{
+          backgroundImage:
+            'radial-gradient(150px 150px at 90% -20%, rgba(16,185,129,0.50), rgba(16,185,129,0) 70%), radial-gradient(160px 160px at -10% 120%, rgba(16,185,129,0.16), rgba(16,185,129,0) 70%)',
+        }}
+      >
         <div className="relative">
           <div className="text-[11px] font-bold uppercase tracking-widest text-white/45">
             총 예상 결제금액
