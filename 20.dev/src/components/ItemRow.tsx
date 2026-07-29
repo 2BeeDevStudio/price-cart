@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { Item } from '../types'
 import { useCart } from '../store/cart'
 import { formatWon, formatNumber } from '../lib/format'
+import ItemEditSheet from './ItemEditSheet'
 
 interface ItemRowProps {
   item: Item
@@ -10,24 +12,33 @@ export default function ItemRow({ item }: ItemRowProps) {
   const inc = useCart((s) => s.incQuantity)
   const dec = useCart((s) => s.decQuantity)
   const remove = useCart((s) => s.removeItem)
+  const updateItem = useCart((s) => s.updateItem)
+  const [editing, setEditing] = useState(false)
 
   const lineTotal = item.price * item.quantity
 
   return (
     <li className="flex items-center gap-3 bg-white px-4 py-3">
-      <div className="min-w-0 flex-1">
+      {/* 탭하면 상품명/가격 수정 */}
+      <button
+        onClick={() => setEditing(true)}
+        className="min-w-0 flex-1 text-left active:opacity-60"
+      >
         {item.name && (
           <div className="truncate text-sm font-medium text-slate-500">{item.name}</div>
         )}
-        <div className="text-lg font-semibold text-slate-900 tabular-nums">
+        <div className="flex items-center gap-1 text-lg font-semibold text-slate-900 tabular-nums">
           {formatWon(item.price)}
+          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 text-slate-300">
+            <path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
         {item.quantity > 1 && (
           <div className="text-xs text-slate-400 tabular-nums">
             {formatNumber(item.price)} × {item.quantity} = {formatWon(lineTotal)}
           </div>
         )}
-      </div>
+      </button>
 
       {/* 수량 스텝퍼 */}
       <div className="flex items-center rounded-full border border-slate-200">
@@ -65,6 +76,14 @@ export default function ItemRow({ item }: ItemRowProps) {
           />
         </svg>
       </button>
+
+      {editing && (
+        <ItemEditSheet
+          item={item}
+          onSave={(patch) => updateItem(item.id, patch)}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </li>
   )
 }

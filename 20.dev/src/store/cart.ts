@@ -19,6 +19,8 @@ interface CartState {
   /** 수량 +1 / -1 (1 미만으로는 내려가지 않음) */
   incQuantity: (id: string) => void
   decQuantity: (id: string) => void
+  /** 상품명/가격 수정 */
+  updateItem: (id: string, patch: { name?: string; price?: number }) => void
   /** 상품 삭제 */
   removeItem: (id: string) => void
   /** 전체 비우기 (저장 없이 버림) */
@@ -83,6 +85,19 @@ export const useCart = create<CartState>()(
         set((state) => ({
           items: state.items.map((it) =>
             it.id === id ? { ...it, quantity: Math.max(1, it.quantity - 1) } : it,
+          ),
+        })),
+
+      updateItem: (id, patch) =>
+        set((state) => ({
+          items: state.items.map((it) =>
+            it.id === id
+              ? {
+                  ...it,
+                  ...(patch.name !== undefined ? { name: patch.name.trim() || undefined } : {}),
+                  ...(patch.price !== undefined ? { price: Math.max(0, Math.round(patch.price)) } : {}),
+                }
+              : it,
           ),
         })),
 

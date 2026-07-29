@@ -3,6 +3,7 @@ import { useCart } from '../store/cart'
 import { formatWon, formatDateKo } from '../lib/format'
 import type { Item, ShoppingTrip } from '../types'
 import StorePicker from './StorePicker'
+import ItemEditSheet from './ItemEditSheet'
 
 interface HistoryScreenProps {
   onClose: () => void
@@ -16,8 +17,20 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
 
   const [expanded, setExpanded] = useState<string | null>(null)
   const [storeEditId, setStoreEditId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<{ tripId: string; item: Item } | null>(null)
 
   const storeEditTrip = trips.find((t) => t.id === storeEditId) ?? null
+
+  function saveItem(tripId: string, itemId: string, patch: { name: string; price: number }) {
+    const trip = trips.find((t) => t.id === tripId)
+    if (!trip) return
+    const items = trip.items.map((it) =>
+      it.id === itemId
+        ? { ...it, name: patch.name.trim() || undefined, price: Math.max(0, Math.round(patch.price)) }
+        : it,
+    )
+    updateTripItems(tripId, items)
+  }
 
   function changeQty(trip: ShoppingTrip, itemId: string, delta: number) {
     const items = trip.items.map((it) =>
@@ -113,19 +126,25 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
                       <ul className="divide-y divide-slate-50">
                         {trip.items.map((it) => (
                           <li key={it.id} className="flex items-center gap-2 py-2">
-                            <div className="min-w-0 flex-1">
+                            <button
+                              onClick={() => setEditing({ tripId: trip.id, item: it })}
+                              className="min-w-0 flex-1 text-left active:opacity-60"
+                            >
                               {it.name && (
                                 <div className="truncate text-xs text-slate-400">{it.name}</div>
                               )}
-                              <div className="text-sm font-medium tabular-nums text-slate-700">
+                              <div className="flex items-center gap-1 text-sm font-medium tabular-nums text-slate-700">
                                 {formatWon(it.price * it.quantity)}
                                 {it.quantity > 1 && (
-                                  <span className="ml-1 text-xs font-normal text-slate-400">
+                                  <span className="text-xs font-normal text-slate-400">
                                     ({formatWon(it.price)}×{it.quantity})
                                   </span>
                                 )}
+                                <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3 text-slate-300">
+                                  <path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
                               </div>
-                            </div>
+                            </button>
                             <div className="flex items-center rounded-full border border-slate-200">
                               <button
                                 aria-label="수량 감소"
@@ -193,6 +212,14 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
           current={storeEditTrip.store ?? ''}
           onSelect={(name) => setTripStore(storeEditTrip.id, name)}
           onClose={() => setStoreEditId(null)}
+        />
+      )}
+
+      {editing && (
+        <ItemEditSheet
+          item={editing.item}
+          onSave={(patch) => saveItem(editing.tripId, editing.item.id, patch)}
+          onClose={() => setEditing(null)}
         />
       )}
     </div>
