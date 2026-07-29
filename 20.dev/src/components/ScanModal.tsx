@@ -129,12 +129,28 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-black/60" onClick={onClose}>
       <div
-        className="safe-bottom mt-auto w-full rounded-t-3xl bg-white"
+        className="safe-bottom mt-auto max-h-[90dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl bg-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto max-w-md px-5 pb-6 pt-3">
-          {/* grabber */}
-          <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-200" />
+          {/* grabber + 닫기 */}
+          <div className="relative mb-4 flex items-center justify-center pt-1">
+            <div className="h-1.5 w-10 rounded-full bg-slate-200" />
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 active:bg-slate-100"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path
+                  d="M6 6l12 12M18 6L6 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
 
           <input
             ref={fileRef}

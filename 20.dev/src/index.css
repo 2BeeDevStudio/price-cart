@@ -12,6 +12,11 @@ body,
   height: 100%;
 }
 
+html {
+  /* 당겨서 새로고침(pull-to-refresh) 완전 차단 */
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   background: #f1f5f9;
@@ -19,7 +24,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic',
     'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   /* Prevent pull-to-refresh / overscroll bounce for an app-like feel */
-  overscroll-behavior-y: contain;
+  overscroll-behavior: none;
 }
 
 /* Respect iOS safe areas (notch / home indicator) */
