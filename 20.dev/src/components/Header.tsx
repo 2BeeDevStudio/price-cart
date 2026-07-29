@@ -97,23 +97,36 @@ export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudg
 
           {/* 예산 */}
           {budget != null ? (
-            <button onClick={onEditBudget} className="mt-4 block w-full text-left">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
-                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-xs tabular-nums">
-                <span className="text-white/50">예산 {formatWon(budget)}</span>
-                <span className={`font-semibold ${remainColor}`}>
+            <button onClick={onEditBudget} className="mt-4 block w-full text-left active:opacity-70">
+              <div className="mb-2 flex items-center justify-between text-xs tabular-nums">
+                <span className="inline-flex items-center gap-1 font-semibold text-white/70">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                    <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+                    <circle cx="12" cy="12" r="3" fill="currentColor" />
+                  </svg>
+                  예산 {formatWon(budget)}
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3 text-white/40">
+                    <path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span className={`font-bold ${remainColor}`}>
                   {over ? `${formatWon(-remaining)} 초과` : `남은 ${formatWon(remaining)}`}
                 </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-white/15">
+                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
               </div>
             </button>
           ) : (
             <button
               onClick={onEditBudget}
-              className="mt-4 inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70 active:bg-white/20"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand/20 px-4 py-2 text-sm font-bold text-brand-light active:bg-brand/30"
             >
-              <span className="text-sm leading-none">＋</span> 예산 설정
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+                <circle cx="12" cy="12" r="3" fill="currentColor" />
+              </svg>
+              예산 설정하기
             </button>
           )}
         </div>
