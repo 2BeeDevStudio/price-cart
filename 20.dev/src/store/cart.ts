@@ -45,6 +45,8 @@ interface CartState {
   finishShopping: () => ShoppingTrip | null
   /** 지난 기록 삭제 */
   removeTrip: (id: string) => void
+  /** 모든 지난 기록 삭제 */
+  clearTrips: () => void
   /** 지난 기록의 마트 이름 수정 */
   setTripStore: (id: string, store: string) => void
   /** 지난 기록의 상품 목록 수정 (합계/개수 자동 재계산) */
@@ -158,6 +160,8 @@ export const useCart = create<CartState>()(
       },
 
       removeTrip: (id) => set((state) => ({ trips: state.trips.filter((t) => t.id !== id) })),
+
+      clearTrips: () => set({ trips: [] }),
 
       setTripStore: (id, store) =>
         set((state) => ({

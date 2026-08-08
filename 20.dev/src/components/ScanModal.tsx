@@ -161,24 +161,44 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto max-w-md px-5 pb-6 pt-3">
-          {/* grabber + 닫기 */}
-          <div className="relative mb-4 flex items-center justify-center pt-1">
-            <div className="h-1.5 w-10 rounded-full bg-slate-200" />
-            <button
-              onClick={onClose}
-              aria-label="닫기"
-              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 active:bg-slate-100"
-            >
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <path
-                  d="M6 6l12 12M18 6L6 18"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
+          {/* 헤더 */}
+          {phase === 'review' ? (
+            <div className="mb-4 flex items-center justify-between pt-1">
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+              <span className="text-base font-bold text-slate-900">가격 확인</span>
+              <button
+                onClick={retake}
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 active:bg-slate-200"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                  <path d="M4 8a2 2 0 0 1 2-2h1l.6-1.2A1 1 0 0 1 8.5 4h7a1 1 0 0 1 .9.8L17 6h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" stroke="currentColor" strokeWidth="1.6" />
+                  <circle cx="12" cy="12.5" r="3" stroke="currentColor" strokeWidth="1.6" />
+                </svg>
+                다시
+              </button>
+            </div>
+          ) : (
+            <div className="relative mb-4 flex items-center justify-center pt-1">
+              <div className="h-1.5 w-10 rounded-full bg-slate-200" />
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 active:bg-slate-100"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           <input
             ref={fileRef}
@@ -248,11 +268,19 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
           {phase === 'review' && (
             <div className="py-2">
               {previewUrl && (
-                <img
-                  src={previewUrl}
-                  alt="촬영한 가격표"
-                  className="mx-auto mb-4 max-h-36 rounded-xl object-contain"
-                />
+                <div className="relative mb-4">
+                  <img
+                    src={previewUrl}
+                    alt="촬영한 가격표"
+                    className="mx-auto max-h-36 rounded-xl object-contain"
+                  />
+                  <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-900/80 px-2 py-1 text-[11px] font-bold text-white">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3">
+                      <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z" fill="currentColor" />
+                    </svg>
+                    {engine === 'cloud' ? 'AI 인식됨' : engine === 'local' ? '기기 인식' : '인식됨'}
+                  </span>
+                </div>
               )}
 
               {/* 상품명 (선택) */}
@@ -267,14 +295,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                 className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-300 focus:border-brand"
               />
 
-              <div className="mb-1 flex items-center justify-between">
-                <label className="text-sm font-medium text-slate-500">인식된 가격</label>
-                {engine === 'local' && (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
-                    오프라인 · 기기 인식
-                  </span>
-                )}
-              </div>
+              <label className="mb-1 block text-sm font-medium text-slate-500">인식된 가격</label>
               <div className="flex items-center rounded-2xl border-2 border-brand bg-white px-4 py-3">
                 <input
                   type="text"
@@ -383,20 +404,12 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
 
               {error && <div className="mt-3 text-sm text-red-500">{error}</div>}
 
-              <div className="mt-5 flex gap-3">
-                <button
-                  onClick={retake}
-                  className="h-14 flex-1 rounded-2xl border border-slate-200 text-base font-semibold text-slate-600 active:bg-slate-50"
-                >
-                  다시 촬영
-                </button>
-                <button
-                  onClick={confirm}
-                  className="h-14 flex-[1.4] rounded-2xl bg-brand text-base font-bold text-white active:bg-brand-dark"
-                >
-                  확인
-                </button>
-              </div>
+              <button
+                onClick={confirm}
+                className="mt-5 flex h-14 w-full items-center justify-center gap-1 rounded-2xl bg-brand text-base font-bold text-white active:bg-brand-dark"
+              >
+                <span className="text-xl leading-none">＋</span> 카트에 담기
+              </button>
 
               {(rawText.trim() || cloudError) && (
                 <details className="mt-4">
