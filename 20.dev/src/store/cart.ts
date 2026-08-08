@@ -43,6 +43,8 @@ interface CartState {
   setBudget: (budget: number | null) => void
   /** 쇼핑 끝 — 현재 목록을 기록으로 저장하고 카트를 비운다. 저장된 기록 반환(비어있으면 null) */
   finishShopping: () => ShoppingTrip | null
+  /** 영수증 등 외부 목록을 바로 새 기록으로 저장 (현재 카트는 건드리지 않음) */
+  saveReceiptTrip: (data: { store?: string; items: Item[]; date?: number }) => ShoppingTrip
   /** 지난 기록 삭제 */
   removeTrip: (id: string) => void
   /** 모든 지난 기록 삭제 */
@@ -156,6 +158,26 @@ export const useCart = create<CartState>()(
           itemCount: state.items.reduce((sum, it) => sum + it.quantity, 0),
         }
         set({ items: [], storeName: '', budget: null, trips: [trip, ...state.trips] })
+        return trip
+      },
+
+      saveReceiptTrip: (data) => {
+        const items = data.items.map((it) => ({
+          ...it,
+          id: it.id || makeId(),
+          quantity: Math.max(1, Math.round(it.quantity || 1)),
+          price: Math.max(0, Math.round(it.price)),
+        }))
+        const trip: ShoppingTrip = {
+          id: makeId(),
+          store: data.store?.trim() || undefined,
+          date: data.date ?? Date.now(),
+          items,
+          total: items.reduce((sum, it) => sum + linePaid(it), 0),
+          savings: items.reduce((sum, it) => sum + lineSavings(it), 0),
+          itemCount: items.reduce((sum, it) => sum + it.quantity, 0),
+        }
+        set((state) => ({ trips: [trip, ...state.trips] }))
         return trip
       },
 

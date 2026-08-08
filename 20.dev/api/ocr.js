@@ -27,6 +27,9 @@ export default async function handler(req, res) {
       return
     }
 
+    // 영수증처럼 조밀한 텍스트는 DOCUMENT_TEXT_DETECTION 이 더 정확
+    const featureType = body.mode === 'document' ? 'DOCUMENT_TEXT_DETECTION' : 'TEXT_DETECTION'
+
     const visionRes = await fetch(
       `https://vision.googleapis.com/v1/images:annotate?key=${key}`,
       {
@@ -36,7 +39,7 @@ export default async function handler(req, res) {
           requests: [
             {
               image: { content: image },
-              features: [{ type: 'TEXT_DETECTION' }],
+              features: [{ type: featureType }],
               imageContext: { languageHints: ['ko', 'en'] },
             },
           ],

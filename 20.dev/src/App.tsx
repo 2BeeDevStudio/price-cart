@@ -5,6 +5,7 @@ import type { PromoType } from './types'
 import Header from './components/Header'
 import ItemRow from './components/ItemRow'
 import ScanModal from './components/ScanModal'
+import ReceiptModal from './components/ReceiptModal'
 import StorePicker from './components/StorePicker'
 import BudgetSheet from './components/BudgetSheet'
 import HistoryScreen from './components/HistoryScreen'
@@ -20,6 +21,7 @@ export default function App() {
   const finishShopping = useCart((s) => s.finishShopping)
 
   const [scanning, setScanning] = useState(false)
+  const [receiptOpen, setReceiptOpen] = useState(false)
   const [pickingStore, setPickingStore] = useState(false)
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -100,6 +102,12 @@ export default function App() {
             <span className="text-2xl leading-none">＋</span>
             상품 추가
           </button>
+          <button
+            onClick={() => setReceiptOpen(true)}
+            className="mx-auto mt-2 flex items-center gap-1.5 text-sm font-semibold text-slate-500 active:text-slate-700"
+          >
+            🧾 영수증으로 기록 담기
+          </button>
         </div>
       </div>
 
@@ -114,6 +122,15 @@ export default function App() {
 
       {scanning && (
         <ScanModal onClose={() => setScanning(false)} onConfirm={handleConfirm} />
+      )}
+      {receiptOpen && (
+        <ReceiptModal
+          onClose={() => setReceiptOpen(false)}
+          onSaved={(count) => {
+            setReceiptOpen(false)
+            setToast(`영수증 ${count}개 품목을 기록에 저장했어요`)
+          }}
+        />
       )}
       {pickingStore && (
         <StorePicker
