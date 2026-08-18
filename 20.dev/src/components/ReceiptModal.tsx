@@ -225,8 +225,8 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
                       </svg>
                     </button>
                   </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center rounded-full border border-slate-200">
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="flex flex-none items-center rounded-full border border-slate-200">
                       <button
                         aria-label="수량 감소"
                         onClick={() => changeQty(r.id, -1)}
@@ -246,16 +246,23 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
                         +
                       </button>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex min-w-0 items-baseline gap-1">
+                      <span className="text-xs text-slate-400">단가</span>
                       <input
                         type="text"
                         inputMode="numeric"
                         value={r.price}
                         onChange={(e) => updateRow(r.id, { price: e.target.value.replace(/[^\d,]/g, '') })}
                         placeholder="0"
-                        className="w-24 bg-transparent text-right text-base font-bold tabular-nums text-slate-900 outline-none placeholder:text-slate-300"
+                        className="w-16 bg-transparent text-right text-sm font-semibold tabular-nums text-slate-600 outline-none placeholder:text-slate-300"
                       />
-                      <span className="text-xs text-slate-400">원</span>
+                      {r.qty > 1 ? (
+                        <span className="whitespace-nowrap text-base font-bold tabular-nums text-slate-900">
+                          ×{r.qty} = {formatWon((parseInt(r.price.replace(/[^\d]/g, ''), 10) || 0) * r.qty)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">원</span>
+                      )}
                     </div>
                   </div>
                 </li>
