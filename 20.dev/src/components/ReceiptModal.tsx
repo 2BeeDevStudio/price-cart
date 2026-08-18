@@ -9,6 +9,7 @@ interface Row {
   id: string
   name: string
   price: string
+  qty: number
 }
 
 interface ReceiptModalProps {
@@ -17,7 +18,7 @@ interface ReceiptModalProps {
 }
 
 let rowSeq = 0
-const newRow = (name = '', price = ''): Row => ({ id: `r${rowSeq++}`, name, price })
+const newRow = (name = '', price = '', qty = 1): Row => ({ id: `r${rowSeq++}`, name, price, qty })
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const toDateInput = (ms: number): string => {
@@ -49,7 +50,7 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
         setRows([newRow()])
         setNote('품목을 자동으로 못 찾았어요. 직접 추가해 주세요.')
       } else {
-        setRows(parsed.map((p) => newRow(p.name, String(p.price))))
+        setRows(parsed.map((p) => newRow(p.name, String(p.price), p.quantity)))
       }
       setPhase('review')
     } catch (e) {
@@ -69,14 +70,21 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
   function updateRow(id: string, patch: Partial<Row>) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
+  function changeQty(id: string, delta: number) {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, qty: Math.max(1, r.qty + delta) } : r)))
+  }
   function removeRow(id: string) {
     setRows((rs) => rs.filter((r) => r.id !== id))
   }
 
   const parsedRows = rows
-    .map((r) => ({ name: r.name.trim(), price: parseInt(r.price.replace(/[^\d]/g, ''), 10) }))
+    .map((r) => ({
+      name: r.name.trim(),
+      price: parseInt(r.price.replace(/[^\d]/g, ''), 10),
+      qty: r.qty,
+    }))
     .filter((r) => Number.isFinite(r.price) && r.price > 0)
-  const total = parsedRows.reduce((s, r) => s + r.price, 0)
+  const total = parsedRows.reduce((s, r) => s + r.price * r.qty, 0)
 
   function save() {
     if (parsedRows.length === 0) {
@@ -87,7 +95,7 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
       id: '',
       name: r.name || undefined,
       price: r.price,
-      quantity: 1,
+      quantity: r.qty,
       createdAt: Date.now(),
     }))
     const dateMs = date ? new Date(`${date}T12:00:00`).getTime() : undefined
@@ -198,32 +206,58 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
 
             <ul className="flex flex-col gap-2">
               {rows.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 rounded-2xl bg-white p-2 shadow-card">
-                  <input
-                    type="text"
-                    value={r.name}
-                    onChange={(e) => updateRow(r.id, { name: e.target.value })}
-                    placeholder="상품명"
-                    className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-sm text-slate-800 outline-none placeholder:text-slate-300"
-                  />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={r.price}
-                    onChange={(e) => updateRow(r.id, { price: e.target.value.replace(/[^\d,]/g, '') })}
-                    placeholder="0"
-                    className="w-20 bg-transparent px-1 py-1.5 text-right text-sm font-bold tabular-nums text-slate-900 outline-none placeholder:text-slate-300"
-                  />
-                  <span className="text-xs text-slate-400">원</span>
-                  <button
-                    onClick={() => removeRow(r.id)}
-                    aria-label="삭제"
-                    className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-slate-300 active:bg-red-50 active:text-red-500"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-                      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                  </button>
+                <li key={r.id} className="rounded-2xl bg-white p-3 shadow-card">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={r.name}
+                      onChange={(e) => updateRow(r.id, { name: e.target.value })}
+                      placeholder="상품명"
+                      className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-300"
+                    />
+                    <button
+                      onClick={() => removeRow(r.id)}
+                      aria-label="삭제"
+                      className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-slate-300 active:bg-red-50 active:text-red-500"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="flex items-center rounded-full border border-slate-200">
+                      <button
+                        aria-label="수량 감소"
+                        onClick={() => changeQty(r.id, -1)}
+                        disabled={r.qty <= 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-base font-bold text-slate-600 active:bg-slate-100 disabled:text-slate-300"
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-sm font-semibold tabular-nums text-slate-800">
+                        {r.qty}
+                      </span>
+                      <button
+                        aria-label="수량 증가"
+                        onClick={() => changeQty(r.id, 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-base font-bold text-brand active:bg-slate-100"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={r.price}
+                        onChange={(e) => updateRow(r.id, { price: e.target.value.replace(/[^\d,]/g, '') })}
+                        placeholder="0"
+                        className="w-24 bg-transparent text-right text-base font-bold tabular-nums text-slate-900 outline-none placeholder:text-slate-300"
+                      />
+                      <span className="text-xs text-slate-400">원</span>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>

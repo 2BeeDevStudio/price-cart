@@ -102,7 +102,22 @@ export function parseReceiptItems(words: OcrWord[]): ParsedReceiptItem[] {
     const amount = Math.max(...nums.filter((n) => n > 0))
     if (!(amount >= 100 && amount < 10_000_000)) continue
 
-    items.push({ name: name.slice(0, 40), price: amount, quantity: 1 })
+    // 단가·수량·금액 열에서 수량 추론: amount = 단가 × 수량 이고 둘 다 숫자열에 존재
+    let unit = amount
+    let quantity = 1
+    const asc = [...nums].sort((a, b) => a - b)
+    for (const q of asc) {
+      if (q < 1 || q > 999 || q >= amount) continue
+      if (amount % q !== 0) continue
+      const u = amount / q
+      if (nums.includes(u)) {
+        unit = u
+        quantity = q
+        break
+      }
+    }
+
+    items.push({ name: name.slice(0, 40), price: unit, quantity })
   }
   return items
 }
