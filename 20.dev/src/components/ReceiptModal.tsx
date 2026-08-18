@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useCart } from '../store/cart'
 import { recognizeReceipt } from '../lib/receiptOcr'
-import { parseReceiptItems } from '../lib/receiptParse'
+import { parseReceiptItems, parseReceiptDate } from '../lib/receiptParse'
 import { formatWon } from '../lib/format'
 import type { Item } from '../types'
 
@@ -19,6 +19,12 @@ interface ReceiptModalProps {
 let rowSeq = 0
 const newRow = (name = '', price = ''): Row => ({ id: `r${rowSeq++}`, name, price })
 
+const pad = (n: number) => String(n).padStart(2, '0')
+const toDateInput = (ms: number): string => {
+  const d = new Date(ms)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 type Phase = 'capture' | 'processing' | 'review'
 
 export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
@@ -27,6 +33,7 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
 
   const [phase, setPhase] = useState<Phase>('capture')
   const [store, setStore] = useState('')
+  const [date, setDate] = useState('') // YYYY-MM-DD
   const [rows, setRows] = useState<Row[]>([])
   const [note, setNote] = useState<string | null>(null)
 
@@ -36,6 +43,8 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
     try {
       const words = await recognizeReceipt(file)
       const parsed = parseReceiptItems(words)
+      const dms = parseReceiptDate(words)
+      if (dms) setDate(toDateInput(dms))
       if (parsed.length === 0) {
         setRows([newRow()])
         setNote('품목을 자동으로 못 찾았어요. 직접 추가해 주세요.')
@@ -81,7 +90,8 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
       quantity: 1,
       createdAt: Date.now(),
     }))
-    saveReceiptTrip({ store, items })
+    const dateMs = date ? new Date(`${date}T12:00:00`).getTime() : undefined
+    saveReceiptTrip({ store, items, date: dateMs })
     onSaved(items.length)
   }
 
@@ -149,14 +159,27 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
 
         {phase === 'review' && (
           <div className="pt-4">
-            <label className="mb-1 block text-sm font-medium text-slate-500">마트 이름 (선택)</label>
-            <input
-              type="text"
-              value={store}
-              onChange={(e) => setStore(e.target.value)}
-              placeholder="예: 우리동네마트"
-              className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-300 focus:border-brand"
-            />
+            <div className="mb-4 flex gap-2">
+              <div className="min-w-0 flex-1">
+                <label className="mb-1 block text-sm font-medium text-slate-500">마트 이름 (선택)</label>
+                <input
+                  type="text"
+                  value={store}
+                  onChange={(e) => setStore(e.target.value)}
+                  placeholder="예: 우리동네마트"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-300 focus:border-brand"
+                />
+              </div>
+              <div className="flex-none">
+                <label className="mb-1 block text-sm font-medium text-slate-500">구매일</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-base text-slate-900 outline-none focus:border-brand"
+                />
+              </div>
+            </div>
 
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-slate-500">

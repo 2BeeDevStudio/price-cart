@@ -47,6 +47,19 @@ function reconstructRows(words: OcrWord[]): OcrWord[][] {
   return rows
 }
 
+/** 영수증에서 구매일 추출 (YYYY-MM-DD 계열). 못 찾으면 null */
+export function parseReceiptDate(words: OcrWord[]): number | null {
+  const text = words.map((w) => w.text).join(' ')
+  // 2026-08-14 / 2026.08.14 / 2026/08/14 (구분자 주변 공백 허용)
+  const m = text.match(/(20\d{2})\s*[-.\/]\s*(\d{1,2})\s*[-.\/]\s*(\d{1,2})/)
+  if (!m) return null
+  const y = +m[1]
+  const mo = +m[2]
+  const d = +m[3]
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null
+  return new Date(y, mo - 1, d, 12, 0, 0).getTime()
+}
+
 export function parseReceiptItems(words: OcrWord[]): ParsedReceiptItem[] {
   const rows = reconstructRows(words)
   const rowText = rows.map((r) =>
