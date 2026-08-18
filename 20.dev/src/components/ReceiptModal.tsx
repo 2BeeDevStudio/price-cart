@@ -34,8 +34,8 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
     setPhase('processing')
     setNote(null)
     try {
-      const text = await recognizeReceipt(file)
-      const parsed = parseReceiptItems(text)
+      const words = await recognizeReceipt(file)
+      const parsed = parseReceiptItems(words)
       if (parsed.length === 0) {
         setRows([newRow()])
         setNote('품목을 자동으로 못 찾았어요. 직접 추가해 주세요.')

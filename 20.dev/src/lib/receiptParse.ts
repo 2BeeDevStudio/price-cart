@@ -1,5 +1,9 @@
-/* 영수증 전체 텍스트 → 품목(상품명 + 금액) 최선 추출.
- * 영수증 형식이 제각각이라 완벽하진 않음 → 사용자가 확인 화면에서 보정하는 전제.
+import type { OcrWord } from './receiptOcr'
+
+/* 영수증 단어 좌표 → 품목(상품명 + 금액) 추출.
+ *  1) 단어들을 y좌표로 묶어 '행' 재구성 (다단 표에서 이름열·숫자열이 분리되는 문제 해결)
+ *  2) '상품명' 헤더 ~ 합계/총품목 사이의 표 영역만 파싱 (헤더/푸터 잡음 제거)
+ *  3) 각 행에서 오른쪽에 몰린 숫자들 중 금액(최댓값)을 가격으로
  */
 
 export interface ParsedReceiptItem {
@@ -8,38 +12,84 @@ export interface ParsedReceiptItem {
   quantity: number
 }
 
-// 품목이 아닌 줄(합계·결제·매장정보 등) 제외 키워드
+// 품목이 아닌 줄 제외 (안전망)
 const EXCLUDE =
-  /합\s*계|소\s*계|총\s*액|총\s*구매|받을\s*금액|결제|거스름|현금|신용|체크|카드|승인|할부|일시불|부가\s*세|부가가치세|공급가액|과세|면세|포인트|적립|잔액|매출|영수증|사업자|대표자?|주소|전화|고객|회원|봉투|할인\s*합계|합계금액|판매|점\b|TEL|POS|번호/i
+  /합\s*계|소\s*계|총\s*액|받을|결제|거스름|현금|신용|체크|카드|승인|할부|일시불|부가|과세|면세|포인트|적립|잔액|매출|영수증|사업자|대표|주소|전화|고객|회원|봉투|품목|수량|단가|금액|POS|TEL|WHOLESALE|CLUB/i
 
-// 가격 숫자: 1,500 / 12,800 / 3000 등
-const PRICE_RE = /-?\d{1,3}(?:,\d{3})+|-?\d{3,}/g
+// 순수 숫자 토큰 (1,780 / 3560 / 2)
+const PURE_NUM = /^-?\d{1,3}(?:,\d{3})*$|^-?\d+$/
 
-export function parseReceiptItems(text: string): ParsedReceiptItem[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
+const norm = (s: string) => s.replace(/\s/g, '')
+const toNum = (t: string) => parseInt(t.replace(/[^\d]/g, ''), 10)
+
+/** y좌표로 단어를 행으로 묶는다 */
+function reconstructRows(words: OcrWord[]): OcrWord[][] {
+  if (words.length === 0) return []
+  const sorted = [...words].sort((a, b) => a.y - b.y)
+  const hs = sorted.map((w) => w.h).filter((h) => h > 0).sort((a, b) => a - b)
+  const medianH = hs.length ? hs[Math.floor(hs.length / 2)] : 12
+  const tol = Math.max(6, medianH * 0.6)
+
+  const rows: OcrWord[][] = []
+  let cur: OcrWord[] = []
+  let curY = -Infinity
+  for (const w of sorted) {
+    if (cur.length === 0 || Math.abs(w.y - curY) <= tol) {
+      cur.push(w)
+      curY = cur.reduce((s, x) => s + x.y, 0) / cur.length
+    } else {
+      rows.push(cur)
+      cur = [w]
+      curY = w.y
+    }
+  }
+  if (cur.length) rows.push(cur)
+  return rows
+}
+
+export function parseReceiptItems(words: OcrWord[]): ParsedReceiptItem[] {
+  const rows = reconstructRows(words)
+  const rowText = rows.map((r) =>
+    [...r].sort((a, b) => a.x - b.x).map((w) => w.text).join(' '),
+  )
+
+  // 표 영역: '상품명' 헤더 다음 ~ 합계/총품목 이전
+  const headerIdx = rowText.findIndex((t) => /상품명|품명/.test(norm(t)))
+  const start = headerIdx >= 0 ? headerIdx + 1 : 0
+  let end = rows.length
+  for (let k = start; k < rows.length; k++) {
+    if (/합계|총품목|결제대상|면세물품|과세물품|부가세|소계|결제금액/.test(norm(rowText[k]))) {
+      end = k
+      break
+    }
+  }
 
   const items: ParsedReceiptItem[] = []
-  for (const line of lines) {
-    if (EXCLUDE.test(line)) continue
+  for (let k = start; k < end; k++) {
+    const tokens = [...rows[k]].sort((a, b) => a.x - b.x).map((w) => w.text)
 
-    const nums = line.match(PRICE_RE)
-    if (!nums) continue
+    // 오른쪽에 몰린 순수 숫자 토큰 수집 (단가·수량·금액 열)
+    let i = tokens.length
+    const nums: number[] = []
+    while (i > 0 && PURE_NUM.test(tokens[i - 1])) {
+      nums.unshift(toNum(tokens[i - 1]))
+      i--
+    }
+    if (nums.length === 0) continue
 
-    // 이름 = 줄에서 뒤쪽 숫자/기호 덩어리 제거
-    const name = line.replace(/[\d,.\-₩원xX*%\s]+$/, '').trim()
-    if (!/[가-힣A-Za-z]/.test(name)) continue // 이름에 글자가 있어야 품목
+    const name = tokens
+      .slice(0, i)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/^[^0-9A-Za-z가-힣]+/, '') // 앞 기호(*) 정리
+      .trim()
+    if (!/[가-힣A-Za-z]/.test(name)) continue // 이름에 글자 필요
+    if (EXCLUDE.test(rowText[k])) continue
 
-    const prices = nums
-      .map((n) => parseInt(n.replace(/,/g, ''), 10))
-      .filter((v) => Number.isFinite(v) && v >= 100 && v < 10_000_000)
-    if (!prices.length) continue
+    const amount = Math.max(...nums.filter((n) => n > 0))
+    if (!(amount >= 100 && amount < 10_000_000)) continue
 
-    // 금액(라인 합계)은 보통 가장 큰 값
-    const price = Math.max(...prices)
-    items.push({ name: name.slice(0, 40), price, quantity: 1 })
+    items.push({ name: name.slice(0, 40), price: amount, quantity: 1 })
   }
   return items
 }
