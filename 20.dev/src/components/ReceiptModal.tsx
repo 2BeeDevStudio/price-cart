@@ -8,7 +8,8 @@ import type { Item } from '../types'
 interface Row {
   id: string
   name: string
-  price: string
+  /** 금액 (라인 합계 = 단가 × 수량) */
+  amount: string
   qty: number
 }
 
@@ -18,7 +19,8 @@ interface ReceiptModalProps {
 }
 
 let rowSeq = 0
-const newRow = (name = '', price = '', qty = 1): Row => ({ id: `r${rowSeq++}`, name, price, qty })
+const newRow = (name = '', amount = '', qty = 1): Row => ({ id: `r${rowSeq++}`, name, amount, qty })
+const digits = (s: string) => parseInt(s.replace(/[^\d]/g, ''), 10) || 0
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const toDateInput = (ms: number): string => {
@@ -50,7 +52,7 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
         setRows([newRow()])
         setNote('품목을 자동으로 못 찾았어요. 직접 추가해 주세요.')
       } else {
-        setRows(parsed.map((p) => newRow(p.name, String(p.price), p.quantity)))
+        setRows(parsed.map((p) => newRow(p.name, String(p.price * p.quantity), p.quantity)))
       }
       setPhase('review')
     } catch (e) {
@@ -71,20 +73,24 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
   function changeQty(id: string, delta: number) {
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, qty: Math.max(1, r.qty + delta) } : r)))
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.id !== id) return r
+        const newQty = Math.max(1, r.qty + delta)
+        // 단가는 유지하고 수량에 맞춰 금액을 다시 계산
+        const unit = r.qty > 0 ? Math.round(digits(r.amount) / r.qty) : digits(r.amount)
+        return { ...r, qty: newQty, amount: String(unit * newQty) }
+      }),
+    )
   }
   function removeRow(id: string) {
     setRows((rs) => rs.filter((r) => r.id !== id))
   }
 
   const parsedRows = rows
-    .map((r) => ({
-      name: r.name.trim(),
-      price: parseInt(r.price.replace(/[^\d]/g, ''), 10),
-      qty: r.qty,
-    }))
-    .filter((r) => Number.isFinite(r.price) && r.price > 0)
-  const total = parsedRows.reduce((s, r) => s + r.price * r.qty, 0)
+    .map((r) => ({ name: r.name.trim(), amount: digits(r.amount), qty: r.qty }))
+    .filter((r) => r.amount > 0)
+  const total = parsedRows.reduce((s, r) => s + r.amount, 0)
 
   function save() {
     if (parsedRows.length === 0) {
@@ -94,7 +100,8 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
     const items: Item[] = parsedRows.map((r) => ({
       id: '',
       name: r.name || undefined,
-      price: r.price,
+      // 단가 = 금액 / 수량 (라인 합계 = 단가 × 수량 유지)
+      price: Math.max(0, Math.round(r.amount / r.qty)),
       quantity: r.qty,
       createdAt: Date.now(),
     }))
@@ -246,22 +253,22 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
                         +
                       </button>
                     </div>
-                    <div className="flex min-w-0 items-baseline gap-1">
-                      <span className="text-xs text-slate-400">단가</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={r.price}
-                        onChange={(e) => updateRow(r.id, { price: e.target.value.replace(/[^\d,]/g, '') })}
-                        placeholder="0"
-                        className="w-16 bg-transparent text-right text-sm font-semibold tabular-nums text-slate-600 outline-none placeholder:text-slate-300"
-                      />
-                      {r.qty > 1 ? (
-                        <span className="whitespace-nowrap text-base font-bold tabular-nums text-slate-900">
-                          ×{r.qty} = {formatWon((parseInt(r.price.replace(/[^\d]/g, ''), 10) || 0) * r.qty)}
-                        </span>
-                      ) : (
+                    <div className="min-w-0 text-right">
+                      <div className="flex items-baseline justify-end gap-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={r.amount}
+                          onChange={(e) => updateRow(r.id, { amount: e.target.value.replace(/[^\d,]/g, '') })}
+                          placeholder="0"
+                          className="w-24 bg-transparent text-right text-base font-bold tabular-nums text-slate-900 outline-none placeholder:text-slate-300"
+                        />
                         <span className="text-xs text-slate-400">원</span>
+                      </div>
+                      {r.qty > 1 && (
+                        <div className="text-xs text-slate-400 tabular-nums">
+                          단가 {formatWon(Math.round(digits(r.amount) / r.qty))} × {r.qty}
+                        </div>
                       )}
                     </div>
                   </div>
