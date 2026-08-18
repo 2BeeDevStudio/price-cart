@@ -14,10 +14,13 @@ export interface ParsedReceiptItem {
 
 // 품목이 아닌 줄 제외 (안전망)
 const EXCLUDE =
-  /합\s*계|소\s*계|총\s*액|받을|결제|거스름|현금|신용|체크|카드|승인|할부|일시불|부가|과세|면세|포인트|적립|잔액|매출|영수증|사업자|대표|주소|전화|고객|회원|봉투|품목|수량|단가|금액|POS|TEL|WHOLESALE|CLUB/i
+  /합\s*계|소\s*계|총\s*액|받을|결제|거스름|현금|신용|체크|카드|승인|할부|일시불|부가|과세|면세|포인트|적립|잔액|매출|영수증|사업자|대표|본사|매장|주소|전화|고객|회원|봉투|품목|수량|단가|금액|교환|환불|포장|취소|인증|품질|경영|멤버십|문의|간편|국민가게|다이소|POS|TEL|ISO|CCM|WHOLESALE|CLUB/i
 
 // 순수 숫자 토큰 (1,780 / 3560 / 2)
 const PURE_NUM = /^-?\d{1,3}(?:,\d{3})*$|^-?\d+$/
+
+// 바코드/상품코드 토큰: [1024573] 또는 7자리 이상 숫자 → 품목명·가격에서 제외
+const isBarcode = (t: string) => /^\[\d{3,}\]$/.test(t) || /^\d{7,}$/.test(t)
 
 const norm = (s: string) => s.replace(/\s/g, '')
 const toNum = (t: string) => parseInt(t.replace(/[^\d]/g, ''), 10)
@@ -61,7 +64,9 @@ export function parseReceiptDate(words: OcrWord[]): number | null {
 }
 
 export function parseReceiptItems(words: OcrWord[]): ParsedReceiptItem[] {
-  const rows = reconstructRows(words)
+  // 바코드/상품코드 토큰 제거 (이름 오염·행 어긋남 방지)
+  const clean = words.filter((w) => !isBarcode(w.text.trim()))
+  const rows = reconstructRows(clean)
   const rowText = rows.map((r) =>
     [...r].sort((a, b) => a.x - b.x).map((w) => w.text).join(' '),
   )
