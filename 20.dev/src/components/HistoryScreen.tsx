@@ -8,12 +8,15 @@ import type { Item, PromoType, ShoppingTrip } from '../types'
 import StorePicker from './StorePicker'
 import ItemEditSheet from './ItemEditSheet'
 import BackupSheet from './BackupSheet'
+import ReceiptIcon from './ReceiptIcon'
 
 interface HistoryScreenProps {
   onClose: () => void
+  /** 영수증으로 기록 추가 열기 */
+  onAddReceipt: () => void
 }
 
-export default function HistoryScreen({ onClose }: HistoryScreenProps) {
+export default function HistoryScreen({ onClose, onAddReceipt }: HistoryScreenProps) {
   const trips = useCart((s) => s.trips)
   const removeTrip = useCart((s) => s.removeTrip)
   const setTripStore = useCart((s) => s.setTripStore)
@@ -110,11 +113,21 @@ export default function HistoryScreen({ onClose }: HistoryScreenProps) {
           </div>
         </div>
 
+        <button
+          onClick={onAddReceipt}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 text-sm font-bold text-slate-700 shadow-card active:bg-slate-50"
+        >
+          <ReceiptIcon className="h-5 w-5 text-brand" />
+          영수증으로 기록 추가
+        </button>
+
         {trips.length === 0 ? (
-          <div className="mt-4 flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-16 text-center shadow-card">
+          <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-16 text-center shadow-card">
             <div className="mb-4 text-5xl">🧾</div>
             <div className="text-base font-bold text-slate-600">저장된 쇼핑이 없어요</div>
-            <p className="mt-1 text-sm text-slate-400">상품을 담고 "쇼핑 끝"을 누르면 여기에 기록돼요.</p>
+            <p className="mt-1 text-sm text-slate-400">
+              "쇼핑 끝"을 누르거나 영수증을 찍으면 여기에 기록돼요.
+            </p>
           </div>
         ) : (
           <ul className="flex flex-col gap-3">

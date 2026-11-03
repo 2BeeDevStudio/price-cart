@@ -10,6 +10,7 @@ import StorePicker from './components/StorePicker'
 import BudgetSheet from './components/BudgetSheet'
 import HistoryScreen from './components/HistoryScreen'
 import ShoppingList from './components/ShoppingList'
+import ReceiptIcon from './components/ReceiptIcon'
 import { useList, visibleItems } from './store/list'
 import { startListSync, parseShareInput, joinShare, errorText } from './lib/listSync'
 
@@ -120,13 +121,31 @@ export default function App() {
       <main className="flex-1 px-5 pb-44 pt-5">
         <ShoppingList />
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-20 text-center shadow-card">
-            <div className="mb-4 text-5xl">🛒</div>
-            <div className="text-base font-bold text-slate-600">담은 상품이 없어요</div>
-            <p className="mt-1 text-sm text-slate-400">
-              아래 버튼을 눌러 가격표를 촬영해 보세요.
-            </p>
-          </div>
+          <>
+            <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-14 text-center shadow-card">
+              <div className="mb-4 text-5xl">🛒</div>
+              <div className="text-base font-bold text-slate-600">담은 상품이 없어요</div>
+              <p className="mt-1 text-sm text-slate-400">
+                아래 버튼을 눌러 가격표를 촬영해 보세요.
+              </p>
+            </div>
+            {/* 장보고 온 뒤: 영수증으로 기록 남기기 (카트가 빌 때만) */}
+            <button
+              onClick={() => setReceiptOpen(true)}
+              className="mt-3 flex w-full items-center gap-3 rounded-3xl bg-white px-5 py-4 text-left shadow-card active:bg-slate-50"
+            >
+              <span className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                <ReceiptIcon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-slate-800">이미 장보고 왔어요?</span>
+                <span className="block text-xs text-slate-400">영수증 찍어서 기록 남기기</span>
+              </span>
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-none text-slate-300">
+                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </>
         ) : (
           <ul className="divide-y divide-slate-100 overflow-hidden rounded-3xl bg-white shadow-card">
             {items.map((item) => (
@@ -160,6 +179,15 @@ export default function App() {
           />
           <div className="flex gap-2">
             <button
+              onClick={openManual}
+              className="flex h-14 flex-none flex-col items-center justify-center rounded-2xl bg-white px-4 text-slate-700 shadow-card active:bg-slate-50"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path d="M4 20h4L19 9l-4-4L4 16v4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              </svg>
+              <span className="mt-0.5 text-xs font-semibold">직접 입력</span>
+            </button>
+            <button
               onClick={() => cameraRef.current?.click()}
               className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-hero active:bg-brand-dark"
             >
@@ -173,28 +201,13 @@ export default function App() {
               </svg>
               가격표 찍기
             </button>
-            <button
-              onClick={openManual}
-              className="flex h-14 flex-none flex-col items-center justify-center rounded-2xl bg-white px-4 text-slate-700 shadow-card active:bg-slate-50"
-            >
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <path d="M4 20h4L19 9l-4-4L4 16v4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-              </svg>
-              <span className="mt-0.5 text-xs font-semibold">직접 입력</span>
-            </button>
           </div>
-          <button
-            onClick={() => setReceiptOpen(true)}
-            className="mx-auto mt-2 flex items-center gap-1.5 text-sm font-semibold text-slate-500 active:text-slate-700"
-          >
-            🧾 영수증으로 기록 담기
-          </button>
         </div>
       </div>
 
       {/* 토스트 */}
       {toast && (
-        <div className="safe-bottom fixed inset-x-0 bottom-24 z-30 flex justify-center px-5">
+        <div className="safe-bottom fixed inset-x-0 bottom-24 z-50 flex justify-center px-5">
           <div className="rounded-full bg-slate-900/90 px-4 py-2 text-sm font-medium text-white shadow-lg">
             {toast}
           </div>
@@ -203,15 +216,6 @@ export default function App() {
 
       {scanning && (
         <ScanModal initialFile={scanFile} onClose={closeScan} onConfirm={handleConfirm} />
-      )}
-      {receiptOpen && (
-        <ReceiptModal
-          onClose={() => setReceiptOpen(false)}
-          onSaved={(count) => {
-            setReceiptOpen(false)
-            setToast(`영수증 ${count}개 품목을 기록에 저장했어요`)
-          }}
-        />
       )}
       {pickingStore && (
         <StorePicker
@@ -227,7 +231,19 @@ export default function App() {
           onClose={() => setBudgetOpen(false)}
         />
       )}
-      {historyOpen && <HistoryScreen onClose={() => setHistoryOpen(false)} />}
+      {historyOpen && (
+        <HistoryScreen onClose={() => setHistoryOpen(false)} onAddReceipt={() => setReceiptOpen(true)} />
+      )}
+      {/* 기록 화면 위에서도 열 수 있게 기록 화면보다 뒤에 둔다 */}
+      {receiptOpen && (
+        <ReceiptModal
+          onClose={() => setReceiptOpen(false)}
+          onSaved={(count) => {
+            setReceiptOpen(false)
+            setToast(`영수증 ${count}개 품목을 기록에 저장했어요`)
+          }}
+        />
+      )}
     </div>
   )
 }
