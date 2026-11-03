@@ -4,6 +4,7 @@ import { formatWon, formatNumber } from '../lib/format'
 import { PROMO_OPTIONS } from '../lib/promo'
 import type { PromoType } from '../types'
 import { useList, findListMatch } from '../store/list'
+import { detectDiscount } from '../lib/discountDetect'
 
 type Phase = 'capture' | 'processing' | 'review'
 
@@ -33,6 +34,9 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
   const [promo, setPromo] = useState<PromoType | null>(null)
   const [showDiscount, setShowDiscount] = useState(false)
   const [original, setOriginal] = useState('')
+  // 가격표에서 할인·행사를 찾아 미리 켰는지 (안내 문구용)
+  const [autoDiscount, setAutoDiscount] = useState(false)
+  const [autoPromo, setAutoPromo] = useState(false)
   const [engine, setEngine] = useState<OcrEngine | null>(null)
   const [rawText, setRawText] = useState('')
   const [cloudError, setCloudError] = useState<string | undefined>(undefined)
@@ -72,6 +76,17 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
       setListPick(findListMatch(useList.getState().items, result.nameGuess)?.id ?? null)
       setCandidates(result.candidates.slice(0, 6))
       setPrice(result.best != null ? String(result.best) : '')
+      // 할인 상품이면 "할인 상품" 버튼과 정가를, 1+1·2+1 이면 행사를 미리 선택
+      const d = detectDiscount(result.rawText, result.candidates, result.best)
+      if (d.original) {
+        setShowDiscount(true)
+        setOriginal(String(d.original))
+        setAutoDiscount(true)
+      }
+      if (d.promo) {
+        setPromo(d.promo)
+        setAutoPromo(true)
+      }
       setPhase('review')
     } catch (e) {
       console.error(e)
@@ -107,6 +122,8 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
     setPickTouched(false)
     setShowDiscount(false)
     setOriginal('')
+    setAutoDiscount(false)
+    setAutoPromo(false)
     setEngine(null)
     setRawText('')
     setCloudError(undefined)
@@ -116,6 +133,7 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
   }
 
   function toggleDiscount() {
+    setAutoDiscount(false)
     setShowDiscount((v) => {
       const next = !v
       // 켤 때 정가가 비어있으면 '가장 큰 후보(>판매가)'로 자동 프리필
@@ -418,7 +436,10 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
                     return (
                       <button
                         key={opt.label}
-                        onClick={() => setPromo(opt.value)}
+                        onClick={() => {
+                          setPromo(opt.value)
+                          setAutoPromo(false)
+                        }}
                         className={`flex-1 rounded-2xl py-2.5 text-sm font-semibold ${
                           active ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 active:bg-slate-200'
                         }`}
@@ -428,6 +449,9 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
                     )
                   })}
                 </div>
+                {autoPromo && promo && (
+                  <div className="mt-1.5 text-xs text-slate-400">가격표에 {promo}이 보여서 미리 골라뒀어요.</div>
+                )}
               </div>
 
               {/* 할인 (정가 입력) */}
@@ -446,6 +470,11 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
                 </button>
                 {showDiscount && (
                   <div className="mt-2">
+                    {autoDiscount && (
+                      <div className="mb-2 text-xs text-slate-400">
+                        가격표에서 할인 표시를 찾아 미리 켜뒀어요. 아니면 버튼을 눌러 끄세요.
+                      </div>
+                    )}
                     <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3">
                       <input
                         type="text"
