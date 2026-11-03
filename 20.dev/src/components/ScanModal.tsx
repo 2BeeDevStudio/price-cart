@@ -8,6 +8,8 @@ import { useList, findListMatch } from '../store/list'
 type Phase = 'capture' | 'processing' | 'review'
 
 interface ScanModalProps {
+  /** 홈에서 바로 찍은 사진. 없으면 직접 입력 모드로 열림 */
+  initialFile?: File | null
   onClose: () => void
   onConfirm: (
     price: number,
@@ -19,9 +21,10 @@ interface ScanModalProps {
   ) => void
 }
 
-export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
+export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
-  const [phase, setPhase] = useState<Phase>('capture')
+  const [phase, setPhase] = useState<Phase>(initialFile ? 'processing' : 'review')
+  const startedRef = useRef(false)
   const [progress, setProgress] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<number[]>([])
@@ -78,6 +81,14 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       setPhase('review')
     }
   }
+
+  // 홈에서 찍은 사진이 있으면 열리자마자 인식 (한 번만 — 개발 모드 이중 실행 방지)
+  useEffect(() => {
+    if (!initialFile || startedRef.current) return
+    startedRef.current = true
+    void handleFile(initialFile)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile])
 
   function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -200,7 +211,9 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                   <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
-              <span className="text-base font-bold text-slate-900">가격 확인</span>
+              <span className="text-base font-bold text-slate-900">
+                {previewUrl ? '가격 확인' : '직접 입력'}
+              </span>
               <button
                 onClick={retake}
                 className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 active:bg-slate-200"
@@ -209,7 +222,7 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                   <path d="M4 8a2 2 0 0 1 2-2h1l.6-1.2A1 1 0 0 1 8.5 4h7a1 1 0 0 1 .9.8L17 6h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" stroke="currentColor" strokeWidth="1.6" />
                   <circle cx="12" cy="12.5" r="3" stroke="currentColor" strokeWidth="1.6" />
                 </svg>
-                다시
+                {previewUrl ? '다시' : '촬영'}
               </button>
             </div>
           ) : (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCart } from './store/cart'
 import { formatDateKo } from './lib/format'
 import type { PromoType } from './types'
@@ -22,6 +22,9 @@ export default function App() {
   const finishShopping = useCart((s) => s.finishShopping)
 
   const [scanning, setScanning] = useState(false)
+  // 홈 버튼으로 바로 찍은 사진 (null이면 직접 입력)
+  const [scanFile, setScanFile] = useState<File | null>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
   const [pickingStore, setPickingStore] = useState(false)
   const [budgetOpen, setBudgetOpen] = useState(false)
@@ -42,8 +45,26 @@ export default function App() {
     checkedText?: string,
   ) {
     addItem(price, name, promo ?? undefined, originalPrice ?? undefined)
-    setScanning(false)
+    closeScan()
     if (checkedText) setToast(`장볼 목록의 '${checkedText}' 체크했어요`)
+  }
+
+  function closeScan() {
+    setScanning(false)
+    setScanFile(null)
+  }
+
+  function onCameraPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // 같은 사진 다시 골라도 감지
+    if (!file) return // 카메라에서 취소하면 아무 일 없음
+    setScanFile(file)
+    setScanning(true)
+  }
+
+  function openManual() {
+    setScanFile(null)
+    setScanning(true)
   }
 
   function handleReset() {
@@ -99,13 +120,39 @@ export default function App() {
               쇼핑 끝 · 기록 저장
             </button>
           )}
-          <button
-            onClick={() => setScanning(true)}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-hero active:bg-brand-dark"
-          >
-            <span className="text-2xl leading-none">＋</span>
-            상품 추가
-          </button>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={onCameraPicked}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => cameraRef.current?.click()}
+              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-hero active:bg-brand-dark"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+                <path
+                  d="M4 8a2 2 0 0 1 2-2h1l.6-1.2A1 1 0 0 1 8.5 4h7a1 1 0 0 1 .9.8L17 6h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              가격표 찍기
+            </button>
+            <button
+              onClick={openManual}
+              className="flex h-14 flex-none flex-col items-center justify-center rounded-2xl bg-white px-4 text-slate-700 shadow-card active:bg-slate-50"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path d="M4 20h4L19 9l-4-4L4 16v4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              </svg>
+              <span className="mt-0.5 text-xs font-semibold">직접 입력</span>
+            </button>
+          </div>
           <button
             onClick={() => setReceiptOpen(true)}
             className="mx-auto mt-2 flex items-center gap-1.5 text-sm font-semibold text-slate-500 active:text-slate-700"
@@ -125,7 +172,7 @@ export default function App() {
       )}
 
       {scanning && (
-        <ScanModal onClose={() => setScanning(false)} onConfirm={handleConfirm} />
+        <ScanModal initialFile={scanFile} onClose={closeScan} onConfirm={handleConfirm} />
       )}
       {receiptOpen && (
         <ReceiptModal
