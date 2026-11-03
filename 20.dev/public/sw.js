@@ -11,7 +11,7 @@ const PRECACHE = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/favicon.svg',
+  '/favicon.png',
   '/apple-touch-icon.png',
   '/icon-192.png',
   '/icon-512.png',
