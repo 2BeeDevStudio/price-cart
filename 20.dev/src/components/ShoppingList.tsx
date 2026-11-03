@@ -1,18 +1,26 @@
 import { useState } from 'react'
-import { useList } from '../store/list'
+import { useList, visibleItems } from '../store/list'
+import { useSync, clearNotice } from '../lib/listSync'
+import ShareSheet from './ShareSheet'
 
 export default function ShoppingList() {
-  const items = useList((s) => s.items)
+  const allItems = useList((s) => s.items)
+  const shareId = useList((s) => s.shareId)
   const addMany = useList((s) => s.addMany)
   const toggle = useList((s) => s.toggle)
   const remove = useList((s) => s.remove)
   const clearChecked = useList((s) => s.clearChecked)
+  const status = useSync((s) => s.status)
+  const notice = useSync((s) => s.notice)
 
   const [open, setOpen] = useState(true)
   const [text, setText] = useState('')
+  const [shareOpen, setShareOpen] = useState(false)
 
+  const items = visibleItems(allItems)
   const unchecked = items.filter((i) => !i.checked)
   const checked = items.filter((i) => i.checked)
+  const dot = status === 'ok' ? 'bg-emerald-500' : status === 'syncing' ? 'bg-amber-400' : 'bg-slate-300'
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,11 +29,11 @@ export default function ShoppingList() {
 
   return (
     <section className="mb-4 overflow-hidden rounded-3xl bg-white shadow-card">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-5 py-4 active:bg-slate-50"
-      >
-        <div className="flex items-center gap-2">
+      <div className="flex items-center pr-3">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex min-w-0 flex-1 items-center gap-2 py-4 pl-5 pr-2 text-left active:bg-slate-50"
+        >
           <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
             장볼 목록
           </span>
@@ -34,15 +42,46 @@ export default function ShoppingList() {
               {checked.length}/{items.length}
             </span>
           )}
-        </div>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          className={`h-5 w-5 text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className={`ml-auto h-5 w-5 flex-none text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`}
+          >
+            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setShareOpen(true)}
+          className={`flex flex-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
+            shareId ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+          } active:opacity-70`}
         >
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+          {shareId ? (
+            <span className={`h-2 w-2 rounded-full ${dot}`} />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+              <path
+                d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20c0-2.8 2.7-5 6-5 1.3 0 2.5.3 3.4.9M12 20c0-2.8 1.8-5 4-5s4 2.2 4 5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          )}
+          {shareId ? '가족 공유 중' : '공유'}
+        </button>
+      </div>
+
+      {notice && (
+        <div className="mx-5 mb-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+          <span className="flex-1">{notice}</span>
+          <button onClick={clearNotice} aria-label="닫기" className="flex-none text-amber-500">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {shareOpen && <ShareSheet onClose={() => setShareOpen(false)} />}
 
       {open && (
         <div className="border-t border-slate-100 px-5 pb-4 pt-3">

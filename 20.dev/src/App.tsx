@@ -10,6 +10,8 @@ import StorePicker from './components/StorePicker'
 import BudgetSheet from './components/BudgetSheet'
 import HistoryScreen from './components/HistoryScreen'
 import ShoppingList from './components/ShoppingList'
+import { useList, visibleItems } from './store/list'
+import { startListSync, parseShareInput, joinShare, errorText } from './lib/listSync'
 
 export default function App() {
   const items = useCart((s) => s.items)
@@ -30,6 +32,34 @@ export default function App() {
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  // 가족 공유 장볼 목록 동기화
+  useEffect(() => startListSync(), [])
+
+  // 공유 링크(?list=...)로 열면 참여
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const raw = params.get('list')
+    if (!raw) return
+    params.delete('list')
+    const rest = params.toString()
+    history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '') + location.hash)
+
+    const id = parseShareInput(raw)
+    if (!id) return setToast('올바른 공유 링크가 아니에요')
+    const st = useList.getState()
+    if (st.shareId === id) return setToast('이미 가족 목록에 연결돼 있어요')
+    const n = visibleItems(st.items).length
+    const ask = st.shareId
+      ? '다른 가족 목록으로 바꿀까요?\n지금 공유 중인 목록과는 연결이 끊겨요.'
+      : n > 0
+        ? `가족 장볼 목록에 참여할까요?\n지금 내 목록 ${n}개도 함께 합쳐져요.`
+        : null
+    if (ask && !window.confirm(ask)) return
+    joinShare(id)
+      .then(() => setToast('가족 장볼 목록에 연결됐어요'))
+      .catch((e) => setToast(errorText(e)))
+  }, [])
 
   useEffect(() => {
     if (!toast) return

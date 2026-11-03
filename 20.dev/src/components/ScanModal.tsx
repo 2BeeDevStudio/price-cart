@@ -43,7 +43,7 @@ export default function ScanModal({ initialFile, onClose, onConfirm }: ScanModal
   const setListChecked = useList((s) => s.setChecked)
   const [listPick, setListPick] = useState<string | null>(null)
   const [pickTouched, setPickTouched] = useState(false)
-  const openList = listItems.filter((i) => !i.checked)
+  const openList = listItems.filter((i) => !i.checked && !i.deleted)
 
   // 미리보기 objectURL 정리
   useEffect(() => {

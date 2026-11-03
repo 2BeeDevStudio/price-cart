@@ -61,8 +61,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 동일 출처만 처리
+  // 동일 출처만 처리, 서버 API 는 캐시하지 않음 (공유 목록이 옛날 상태로 보이지 않게)
   if (url.origin !== self.location.origin) return
+  if (url.pathname.startsWith('/api/')) return
 
   // 내비게이션: 네트워크 우선 + 오프라인 시 캐시된 셸 폴백
   if (request.mode === 'navigate') {
