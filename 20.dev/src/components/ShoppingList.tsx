@@ -38,7 +38,7 @@ export default function ShoppingList() {
             장볼 목록
           </span>
           {items.length > 0 && (
-            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold tabular-nums text-brand">
+            <span className="rounded-full bg-lime px-2 py-0.5 text-xs font-bold tabular-nums text-brand">
               {checked.length}/{items.length}
             </span>
           )}
@@ -111,7 +111,7 @@ export default function ShoppingList() {
                     onClick={() => toggle(it.id)}
                     aria-label={it.checked ? '체크 해제' : '체크'}
                     className={`flex h-6 w-6 flex-none items-center justify-center rounded-lg border-2 ${
-                      it.checked ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white'
+                      it.checked ? 'border-lime bg-lime text-brand' : 'border-slate-300 bg-white'
                     }`}
                   >
                     {it.checked && (

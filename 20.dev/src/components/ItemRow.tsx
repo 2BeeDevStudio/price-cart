@@ -63,8 +63,8 @@ export default function ItemRow({ item }: ItemRowProps) {
         {(item.quantity > 1 || free > 0 || savings > 0) && (
           <div className="text-xs tabular-nums text-slate-400">
             {item.quantity > 1 && <span>{formatWon(item.price)} × {item.quantity}</span>}
-            {free > 0 && <span className="text-brand"> · {free}개 무료</span>}
-            {savings > 0 && free === 0 && <span className="text-brand"> · {formatWon(savings)} 절약</span>}
+            {free > 0 && <span className="text-emerald-600"> · {free}개 무료</span>}
+            {savings > 0 && free === 0 && <span className="text-emerald-600"> · {formatWon(savings)} 절약</span>}
           </div>
         )}
       </button>

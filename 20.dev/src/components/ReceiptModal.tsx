@@ -118,8 +118,8 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#f5f1ec]">
-      <header className="safe-top sticky top-0 z-10 bg-[#f5f1ec]/85 backdrop-blur">
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#F3F5F9]">
+      <header className="safe-top sticky top-0 z-10 bg-[#F3F5F9]/85 backdrop-blur">
         <div className="mx-auto flex max-w-md items-center justify-between px-5 py-3.5">
           <button
             onClick={onClose}
@@ -294,7 +294,7 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
       </main>
 
       {phase === 'review' && (
-        <div className="safe-bottom sticky bottom-0 bg-gradient-to-t from-[#f5f1ec] via-[#f5f1ec] to-transparent px-5 pb-5 pt-6">
+        <div className="safe-bottom sticky bottom-0 bg-gradient-to-t from-[#F3F5F9] via-[#F3F5F9] to-transparent px-5 pb-5 pt-6">
           <button
             onClick={save}
             className="mx-auto flex h-14 w-full max-w-md items-center justify-center gap-1 rounded-2xl bg-brand text-base font-bold text-white active:bg-brand-dark"

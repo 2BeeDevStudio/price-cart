@@ -13,7 +13,7 @@ import { useList } from '../store/list'
 import { useFamily, isMine, authorLabel } from '../store/family'
 
 /** 가계부 사람별 색 (나 = 브랜드 주황) */
-const ME_COLOR = '#EA6A3E'
+const ME_COLOR = '#061A4C'
 const FAMILY_COLORS = ['#5B8DEF', '#22A06B', '#8B5CF6', '#E0559B', '#0EA5A4']
 
 interface Person {
@@ -106,8 +106,8 @@ export default function HistoryScreen({ onClose, onAddReceipt }: HistoryScreenPr
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#f5f1ec]">
-      <header className="safe-top sticky top-0 z-10 bg-[#f5f1ec]/85 backdrop-blur">
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#F3F5F9]">
+      <header className="safe-top sticky top-0 z-10 bg-[#F3F5F9]/85 backdrop-blur">
         <div className="mx-auto flex max-w-md items-center gap-3 px-5 py-3.5">
           <button
             onClick={onClose}
@@ -168,9 +168,9 @@ export default function HistoryScreen({ onClose, onAddReceipt }: HistoryScreenPr
               {formatWon(monthSaved)}
             </div>
           </div>
-          <div className="rounded-2xl p-4" style={{ background: '#FDE4D8' }}>
-            <div className="text-xs font-semibold" style={{ color: '#C2410C' }}>이번 달 지출</div>
-            <div className="mt-1 text-xl font-bold tabular-nums" style={{ color: '#C2410C' }}>
+          <div className="rounded-2xl p-4" style={{ background: '#E6EAF3' }}>
+            <div className="text-xs font-semibold" style={{ color: '#061A4C' }}>이번 달 지출</div>
+            <div className="mt-1 text-xl font-bold tabular-nums" style={{ color: '#061A4C' }}>
               {formatWon(monthSpent)}
             </div>
           </div>

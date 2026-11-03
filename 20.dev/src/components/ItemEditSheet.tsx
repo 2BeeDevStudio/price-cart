@@ -138,7 +138,7 @@ export default function ItemEditSheet({ item, onSave, onDelete, onClose }: ItemE
                 <span className="ml-2 text-base font-bold text-slate-400">원</span>
               </div>
               {discountSavings > 0 && (
-                <div className="mt-1 text-right text-sm font-semibold text-brand tabular-nums">
+                <div className="mt-1 text-right text-sm font-semibold text-emerald-600 tabular-nums">
                   {formatWon(discountSavings)} 절약
                 </div>
               )}

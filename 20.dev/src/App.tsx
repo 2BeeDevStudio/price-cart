@@ -157,7 +157,7 @@ export default function App() {
 
       {/* 하단 고정 버튼 */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20">
-        <div className="mx-auto max-w-md bg-gradient-to-t from-[#f5f1ec] via-[#f5f1ec] to-transparent px-5 pb-5 pt-10">
+        <div className="mx-auto max-w-md bg-gradient-to-t from-[#F3F5F9] via-[#F3F5F9] to-transparent px-5 pb-5 pt-10">
           {items.length > 0 && (
             <button
               onClick={handleFinish}
@@ -191,7 +191,7 @@ export default function App() {
               onClick={() => cameraRef.current?.click()}
               className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-white shadow-hero active:bg-brand-dark"
             >
-              <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+              <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 text-lime">
                 <path
                   d="M4 8a2 2 0 0 1 2-2h1l.6-1.2A1 1 0 0 1 8.5 4h7a1 1 0 0 1 .9.8L17 6h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
                   stroke="currentColor"

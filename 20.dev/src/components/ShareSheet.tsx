@@ -251,7 +251,7 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
                   type="checkbox"
                   checked={includePast}
                   onChange={(e) => setIncludePast(e.target.checked)}
-                  className="h-4 w-4 accent-[#EA6A3E]"
+                  className="h-4 w-4 accent-[#061A4C]"
                 />
                 내 지난 기록 {myTripCount}개도 같이 올리기
               </label>

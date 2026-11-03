@@ -66,61 +66,56 @@ export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudg
       </div>
 
       {/* 히어로 카드 */}
-      <div
-        className="mt-4 rounded-[28px] bg-white p-6 shadow-card transition-colors duration-500"
-        style={bs ? { background: bs.soft } : undefined}
-      >
+      {/* 남색 카드: 금액은 흰색, 예산 상태는 진행바·뱃지 색으로 (여유=라임 → 임박·초과=앰버·레드) */}
+      <div className="mt-4 rounded-[28px] bg-brand p-6 text-white shadow-hero">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            <div className="text-[11px] font-bold uppercase tracking-widest text-brand-light">
               총 예상 결제금액
             </div>
-            <div
-              className="mt-1.5 text-[40px] font-bold leading-none tracking-tight tabular-nums transition-colors duration-500"
-              style={{ color: bs ? bs.strong : '#0f172a' }}
-            >
+            <div className="mt-1.5 text-[40px] font-bold leading-none tracking-tight tabular-nums">
               {formatWon(total)}
             </div>
           </div>
           {bs && (
             <span
-              className="flex flex-none items-center gap-1 rounded-full bg-white/70 px-2.5 py-1 text-xs font-bold"
-              style={{ color: bs.softText }}
+              className="flex flex-none items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold transition-colors duration-500"
+              style={{ color: bs.onDark }}
             >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: bs.strong }} />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: bs.onDark }} />
               {bs.label}
             </span>
           )}
         </div>
 
-        <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-slate-500 tabular-nums">
-          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-slate-400">
+        <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-light tabular-nums">
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
             <path d="M5 7h15l-1.5 8.5a2 2 0 0 1-2 1.5H8.5a2 2 0 0 1-2-1.6L5 5H3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span>상품 {count}개</span>
-          {savings > 0 && <span className="text-brand">· {formatWon(savings)} 절약</span>}
+          {savings > 0 && <span className="text-lime">· {formatWon(savings)} 절약</span>}
         </div>
 
         {/* 예산 */}
         {bs ? (
           <>
-            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-black/5">
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/15">
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${pct}%`, background: bs.strong }}
+                style={{ width: `${pct}%`, background: bs.onDark }}
               />
             </div>
             <button
               onClick={onEditBudget}
               className="mt-2 flex w-full items-center justify-between text-xs tabular-nums active:opacity-60"
             >
-              <span className="inline-flex items-center gap-1 font-semibold text-slate-400">
+              <span className="inline-flex items-center gap-1 font-semibold text-brand-light">
                 예산 {formatWon(budget!)}
                 <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3">
                   <path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
-              <span className="font-bold" style={{ color: bs.strong }}>
+              <span className="font-bold transition-colors duration-500" style={{ color: bs.onDark }}>
                 {over ? `${formatWon(-remaining)} 초과` : `앞으로 ${formatWon(remaining)}`}
               </span>
             </button>
@@ -128,7 +123,7 @@ export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudg
         ) : (
           <button
             onClick={onEditBudget}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-4 py-2 text-sm font-bold text-brand active:bg-brand/20"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-lime px-4 py-2 text-sm font-bold text-brand active:bg-lime-dark"
           >
             <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
               <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />

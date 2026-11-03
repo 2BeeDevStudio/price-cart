@@ -4,11 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        // 로고 색: 남색(주) + 라임(포인트)
         brand: {
-          DEFAULT: '#EA6A3E',
-          dark: '#D2542A',
-          light: '#F5A583',
+          DEFAULT: '#061A4C',
+          dark: '#020D2B',
+          light: '#9AA6C4',
         },
+        lime: {
+          DEFAULT: '#CCF955',
+          dark: '#B5E63A',
+          soft: '#F1FCD6',
+        },
+        canvas: '#F3F5F9',
         ink: '#0f172a',
       },
       boxShadow: {

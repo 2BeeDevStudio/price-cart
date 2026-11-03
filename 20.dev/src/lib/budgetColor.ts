@@ -30,6 +30,8 @@ export interface BudgetStyle {
   soft: string
   /** soft 위 텍스트 */
   softText: string
+  /** 남색 카드 위 진행바·글씨: 여유면 로고 라임, 임박부터 앰버→오렌지→레드 (밝게) */
+  onDark: string
   label: BudgetLabel
 }
 
@@ -43,6 +45,7 @@ export function budgetStyle(total: number, budget: number): BudgetStyle {
     strong: `oklch(0.60 0.17 ${h})`,
     soft: `oklch(0.965 0.035 ${h})`,
     softText: `oklch(0.46 0.14 ${h})`,
+    onDark: ratio < 0.6 ? '#CCF955' : `oklch(0.80 0.16 ${h})`,
     label,
   }
 }

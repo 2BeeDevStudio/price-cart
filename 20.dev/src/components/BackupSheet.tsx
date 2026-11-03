@@ -101,9 +101,9 @@ export default function BackupSheet({ onClose }: BackupSheetProps) {
           <div className="mb-4 text-lg font-bold text-slate-900">백업 / 복원</div>
 
           {/* 데이터 카드 */}
-          <div className="mb-4 rounded-2xl p-4" style={{ background: '#FDE4D8' }}>
-            <div className="text-xs font-semibold" style={{ color: '#C2410C' }}>저장된 데이터</div>
-            <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color: '#C2410C' }}>
+          <div className="mb-4 rounded-2xl p-4" style={{ background: '#E6EAF3' }}>
+            <div className="text-xs font-semibold" style={{ color: '#061A4C' }}>저장된 데이터</div>
+            <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color: '#061A4C' }}>
               {tripCount}건의 쇼핑 기록
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function BackupSheet({ onClose }: BackupSheetProps) {
             onClick={handleExport}
             className="mb-2.5 flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-left shadow-card active:bg-slate-50"
           >
-            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl" style={{ background: '#FDE4D8', color: '#C2410C' }}>
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl" style={{ background: '#E6EAF3', color: '#061A4C' }}>
               <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
                 <path d="M12 16V4M7 9l5-5 5 5M5 20h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
