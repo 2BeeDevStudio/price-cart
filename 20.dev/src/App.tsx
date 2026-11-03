@@ -9,6 +9,7 @@ import ReceiptModal from './components/ReceiptModal'
 import StorePicker from './components/StorePicker'
 import BudgetSheet from './components/BudgetSheet'
 import HistoryScreen from './components/HistoryScreen'
+import ShoppingList from './components/ShoppingList'
 
 export default function App() {
   const items = useCart((s) => s.items)
@@ -38,9 +39,11 @@ export default function App() {
     name: string,
     promo: PromoType | null,
     originalPrice: number | null,
+    checkedText?: string,
   ) {
     addItem(price, name, promo ?? undefined, originalPrice ?? undefined)
     setScanning(false)
+    if (checkedText) setToast(`장볼 목록의 '${checkedText}' 체크했어요`)
   }
 
   function handleReset() {
@@ -64,6 +67,7 @@ export default function App() {
       />
 
       <main className="flex-1 px-5 pb-44 pt-5">
+        <ShoppingList />
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-8 py-20 text-center shadow-card">
             <div className="mb-4 text-5xl">🛒</div>

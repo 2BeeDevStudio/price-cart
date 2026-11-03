@@ -4,6 +4,7 @@ import { recognizeReceipt } from '../lib/receiptOcr'
 import { parseReceiptItems, parseReceiptDate } from '../lib/receiptParse'
 import { formatWon } from '../lib/format'
 import type { Item } from '../types'
+import { useList, findListMatch } from '../store/list'
 
 interface Row {
   id: string
@@ -107,6 +108,12 @@ export default function ReceiptModal({ onClose, onSaved }: ReceiptModalProps) {
     }))
     const dateMs = date ? new Date(`${date}T12:00:00`).getTime() : undefined
     saveReceiptTrip({ store, items, date: dateMs })
+    // 산 품목 이름이 장볼 목록 단어를 포함하면 체크
+    const list = useList.getState()
+    for (const it of items) {
+      const m = findListMatch(useList.getState().items, it.name ?? '')
+      if (m) list.setChecked(m.id, true)
+    }
     onSaved(items.length)
   }
 

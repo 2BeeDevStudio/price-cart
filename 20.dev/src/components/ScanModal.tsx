@@ -3,6 +3,7 @@ import { recognizePrice, type OcrEngine } from '../lib/ocr'
 import { formatWon, formatNumber } from '../lib/format'
 import { PROMO_OPTIONS } from '../lib/promo'
 import type { PromoType } from '../types'
+import { useList, findListMatch } from '../store/list'
 
 type Phase = 'capture' | 'processing' | 'review'
 
@@ -13,6 +14,8 @@ interface ScanModalProps {
     name: string,
     promo: PromoType | null,
     originalPrice: number | null,
+    /** 장볼 목록에서 체크된 항목 이름 (토스트용) */
+    checkedText?: string,
   ) => void
 }
 
@@ -32,6 +35,12 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
   const [cloudError, setCloudError] = useState<string | undefined>(undefined)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 장볼 목록 연결: 선택한 목록 항목 id, 사용자가 직접 고르거나 해제했는지
+  const listItems = useList((s) => s.items)
+  const setListChecked = useList((s) => s.setChecked)
+  const [listPick, setListPick] = useState<string | null>(null)
+  const [pickTouched, setPickTouched] = useState(false)
+  const openList = listItems.filter((i) => !i.checked)
 
   // 미리보기 objectURL 정리
   useEffect(() => {
@@ -56,6 +65,8 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
       setRawText(result.rawText)
       setCloudError(result.cloudError)
       setName(result.nameGuess)
+      // OCR 이름이 목록 단어를 포함하면 그 칩을 미리 선택
+      setListPick(findListMatch(useList.getState().items, result.nameGuess)?.id ?? null)
       setCandidates(result.candidates.slice(0, 6))
       setPrice(result.best != null ? String(result.best) : '')
       setPhase('review')
@@ -81,6 +92,8 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     setPrice('')
     setName('')
     setPromo(null)
+    setListPick(null)
+    setPickTouched(false)
     setShowDiscount(false)
     setOriginal('')
     setEngine(null)
@@ -112,7 +125,21 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
     }
     const o = parseInt(original.replace(/[^\d]/g, ''), 10)
     const originalPrice = showDiscount && Number.isFinite(o) && o > n ? o : null
-    onConfirm(n, name, promo, originalPrice)
+    // 고른 칩이 있으면 그 항목, 사용자가 손대지 않았으면 최종 상품명으로 자동 매칭
+    const pickId = listPick ?? (pickTouched ? null : findListMatch(listItems, name)?.id ?? null)
+    const picked = listItems.find((i) => i.id === pickId)
+    if (picked) setListChecked(picked.id, true)
+    onConfirm(n, name, promo, originalPrice, picked?.text)
+  }
+
+  function tapListChip(id: string, text: string) {
+    setPickTouched(true)
+    if (listPick === id) {
+      setListPick(null)
+      return
+    }
+    setListPick(id)
+    if (!name.trim()) setName(text)
   }
 
   const parsedPreview = (() => {
@@ -294,6 +321,38 @@ export default function ScanModal({ onClose, onConfirm }: ScanModalProps) {
                 placeholder="상품명 (없으면 비워두세요)"
                 className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-300 focus:border-brand"
               />
+
+              {/* 장볼 목록에서 고르기 → 담으면 체크 */}
+              {openList.length > 0 && (
+                <div className="-mt-2 mb-4">
+                  <div className="mb-1.5 text-xs font-medium text-slate-400">
+                    장볼 목록에 있는 거예요? (담으면 체크돼요)
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {openList.map((it) => {
+                      const active = listPick === it.id
+                      return (
+                        <button
+                          key={it.id}
+                          onClick={() => tapListChip(it.id, it.text)}
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium ${
+                            active
+                              ? 'bg-brand text-white'
+                              : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                          }`}
+                        >
+                          {active && (
+                            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                              <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                          {it.text}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               <label className="mb-1 block text-sm font-medium text-slate-500">인식된 가격</label>
               <div className="flex items-center rounded-2xl border-2 border-brand bg-white px-4 py-3">
