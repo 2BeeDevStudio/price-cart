@@ -34,4 +34,8 @@ export interface ShoppingTrip {
   savings?: number
   /** 총 상품 개수 (수량 합, 스냅샷) */
   itemCount: number
+  /** 가족 가계부: 기록한 사람의 기기 id (없으면 이 폰에서 기록한 것) */
+  authorId?: string
+  /** 가족 가계부: 기록한 사람 이름 */
+  authorName?: string
 }

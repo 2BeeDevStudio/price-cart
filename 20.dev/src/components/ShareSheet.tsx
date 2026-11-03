@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useList, visibleItems } from '../store/list'
+import { useCart } from '../store/cart'
+import { useFamily, isMine } from '../store/family'
 import {
   useSync,
   shareUrl,
@@ -8,6 +10,9 @@ import {
   joinShare,
   reissueShare,
   stopShare,
+  enableLedger,
+  disableLedger,
+  renameMe,
   errorText,
 } from '../lib/listSync'
 
@@ -49,15 +54,76 @@ async function sendLink(id: string): Promise<string | null> {
   return '링크를 복사했어요. 가족에게 붙여넣어 보내주세요.'
 }
 
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={onClick}
+      className={`relative h-7 w-12 flex-none rounded-full transition-colors ${on ? 'bg-brand' : 'bg-slate-300'}`}
+    >
+      <span
+        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`}
+      />
+    </button>
+  )
+}
+
 export default function ShareSheet({ onClose }: ShareSheetProps) {
   const shareId = useList((s) => s.shareId)
   const count = useList((s) => visibleItems(s.items).length)
   const status = useSync((s) => s.status)
+  const myName = useFamily((s) => s.myName)
+  const shareLedger = useFamily((s) => s.shareLedger)
+  const deviceId = useFamily((s) => s.deviceId)
+  const myTripCount = useCart((s) => s.trips.filter((t) => isMine(t, deviceId)).length)
 
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [joinText, setJoinText] = useState('')
+  const [name, setName] = useState(myName)
+  // 공유 전: 가계부도 같이 켤지 / 내 예전 기록도 올릴지
+  const [wantLedger, setWantLedger] = useState(true)
+  const [includePast, setIncludePast] = useState(true)
+  const ledgerChecked = shareId ? shareLedger : wantLedger
+
+  /** 가계부를 쓰려면 이름이 필요 (가족 화면에 "누가 썼는지" 표시) */
+  function needName(): boolean {
+    if (name.trim()) return false
+    setErr('가족에게 보일 내 이름을 먼저 적어주세요.')
+    return true
+  }
+
+  /** 공유를 시작/참여한 직후: 이름 저장 + 원하면 가계부 켜기 */
+  function afterConnect() {
+    renameMe(name)
+    if (wantLedger && !useFamily.getState().shareLedger) enableLedger(includePast)
+  }
+
+  function onToggleLedger() {
+    setErr(null)
+    setMsg(null)
+    if (!shareId) {
+      setWantLedger((v) => !v)
+      return
+    }
+    if (shareLedger) {
+      if (
+        !window.confirm(
+          '가족 가계부를 끌까요?\n가족 기록은 이 폰에서 사라지고, 이미 올린 내 기록은 가족에게 남아요.',
+        )
+      )
+        return
+      disableLedger()
+      return
+    }
+    if (needName()) return
+    renameMe(name)
+    enableLedger(includePast)
+    setMsg('가족 가계부를 켰어요. 가족 기록이 곧 보여요.')
+  }
 
   async function run(fn: () => Promise<string | null | void>) {
     setBusy(true)
@@ -74,11 +140,14 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
   }
 
   // 아이폰은 탭 직후에만 공유창을 열어줘서, 링크를 만든 뒤 "링크 보내기"를 한 번 더 누르게 한다
-  const onCreate = () =>
-    run(async () => {
+  const onCreate = () => {
+    if (wantLedger && needName()) return
+    void run(async () => {
       await createShare()
+      afterConnect()
       return '링크를 만들었어요. "링크 보내기"로 가족에게 보내주세요.'
     })
+  }
 
   const onJoin = () => {
     const id = parseShareInput(joinText)
@@ -86,11 +155,13 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
       setErr('받은 링크를 그대로 붙여넣어 주세요.')
       return
     }
+    if (wantLedger && needName()) return
     if (count > 0 && !window.confirm(`가족 목록에 참여할까요?\n지금 내 목록 ${count}개도 함께 합쳐져요.`)) return
     void run(async () => {
       await joinShare(id)
+      afterConnect()
       setJoinText('')
-      return '가족 장볼 목록에 연결됐어요.'
+      return '가족과 연결됐어요.'
     })
   }
 
@@ -108,7 +179,12 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
   }
 
   const onStop = () => {
-    if (!window.confirm('이 폰에서 공유를 끌까요?\n목록은 이 폰에 남고, 가족 목록과 연결만 끊겨요.')) return
+    if (
+      !window.confirm(
+        '이 폰에서 공유를 끌까요?\n내 목록과 기록은 이 폰에 남고, 가족 기록은 이 폰에서 사라져요.',
+      )
+    )
+      return
     stopShare()
     setMsg(null)
   }
@@ -140,11 +216,51 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
           <div className="py-3 text-center">
             <div className="text-lg font-bold text-slate-900">가족과 같이 보기</div>
             <p className="mt-1 text-sm text-slate-500">
-              링크를 받은 가족이 장볼 목록을 같이 보고 체크해요.
+              링크 하나로 장볼 목록과 가계부를 함께 봐요.
               <br />
               로그인은 필요 없어요.
             </p>
           </div>
+
+          {/* 내 이름 + 같이 볼 것 */}
+          <div className="mb-4 rounded-2xl bg-slate-50 p-4">
+            <label className="mb-1 block text-xs font-medium text-slate-500">가족에게 보일 내 이름</label>
+            <input
+              type="text"
+              value={name}
+              maxLength={20}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => name.trim() && renameMe(name)}
+              placeholder="예: 엄마"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-900 outline-none placeholder:text-slate-300 focus:border-brand"
+            />
+            <div className="mb-1 mt-4 text-xs font-medium text-slate-500">같이 볼 것</div>
+            <div className="flex items-center justify-between py-2 text-sm text-slate-700">
+              <span>장볼 목록</span>
+              <span className="text-xs text-slate-400">항상 같이 봐요</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 py-2 text-sm text-slate-700">
+              <span>
+                지난 쇼핑 <span className="text-slate-400">(가족 가계부)</span>
+              </span>
+              <Toggle on={ledgerChecked} onClick={onToggleLedger} label="가족 가계부" />
+            </div>
+            {!shareLedger && myTripCount > 0 && (
+              <label className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={includePast}
+                  onChange={(e) => setIncludePast(e.target.checked)}
+                  className="h-4 w-4 accent-[#EA6A3E]"
+                />
+                내 지난 기록 {myTripCount}개도 같이 올리기
+              </label>
+            )}
+            <p className="mt-2 text-xs text-slate-400">예산은 각자 폰에만 있어요.</p>
+          </div>
+
+          {msg && <div className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-700">{msg}</div>}
+          {err && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-600">{err}</div>}
 
           {shareId ? (
             <>
@@ -207,7 +323,7 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
                 {busy ? '만드는 중…' : '공유 링크 만들기'}
               </button>
               <p className="mt-2 text-center text-xs text-slate-400">
-                링크를 가진 사람은 누구나 목록을 보고 고칠 수 있어요. 가족에게만 보내주세요.
+                링크를 가진 사람은 누구나 목록과 가계부를 볼 수 있어요. 가족에게만 보내주세요.
               </p>
 
               <div className="mt-6 border-t border-slate-100 pt-4">
@@ -231,9 +347,6 @@ export default function ShareSheet({ onClose }: ShareSheetProps) {
               </div>
             </>
           )}
-
-          {msg && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-700">{msg}</div>}
-          {err && <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-600">{err}</div>}
         </div>
       </div>
     </div>

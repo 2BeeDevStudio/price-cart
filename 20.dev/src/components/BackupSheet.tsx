@@ -68,7 +68,11 @@ export default function BackupSheet({ onClose }: BackupSheetProps) {
 
   function handleClear() {
     if (tripCount === 0) return
-    if (window.confirm(`저장된 쇼핑 기록 ${tripCount}개를 모두 삭제할까요? 되돌릴 수 없어요.`)) {
+    if (
+      window.confirm(
+        `저장된 쇼핑 기록 ${tripCount}개를 모두 삭제할까요? 되돌릴 수 없어요.\n가족 가계부를 쓰는 중이면 내가 올린 기록도 가족에게서 지워져요.`,
+      )
+    ) {
       clearTrips()
       setMsg('모든 기록을 삭제했어요.')
     }

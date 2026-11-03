@@ -58,7 +58,7 @@ export default function App() {
         : null
     if (ask && !window.confirm(ask)) return
     joinShare(id)
-      .then(() => setToast('가족 장볼 목록에 연결됐어요'))
+      .then(() => setToast('가족과 연결됐어요 · 가계부는 장볼 목록의 공유 버튼에서 켜요'))
       .catch((e) => setToast(errorText(e)))
   }, [])
 
