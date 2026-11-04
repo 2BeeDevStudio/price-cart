@@ -12,7 +12,18 @@ import HistoryScreen from './components/HistoryScreen'
 import ShoppingList from './components/ShoppingList'
 import ReceiptIcon from './components/ReceiptIcon'
 import { useList, visibleItems } from './store/list'
-import { startListSync, parseShareInput, joinShare, errorText } from './lib/listSync'
+import TogetherSheet from './components/TogetherSheet'
+import { TogetherBanner, TogetherStartCard } from './components/TogetherBits'
+import { useTogether } from './store/together'
+import { useFamily } from './store/family'
+import {
+  startListSync,
+  parseShareInput,
+  joinShare,
+  errorText,
+  startTogether,
+  finishShoppingTogether,
+} from './lib/listSync'
 
 export default function App() {
   const items = useCart((s) => s.items)
@@ -22,7 +33,7 @@ export default function App() {
   const setStore = useCart((s) => s.setStore)
   const budget = useCart((s) => s.budget)
   const setBudget = useCart((s) => s.setBudget)
-  const finishShopping = useCart((s) => s.finishShopping)
+  const together = useTogether((s) => s.sid != null)
 
   const [scanning, setScanning] = useState(false)
   // 홈 버튼으로 바로 찍은 사진 (null이면 직접 입력)
@@ -32,6 +43,7 @@ export default function App() {
   const [pickingStore, setPickingStore] = useState(false)
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [togetherOpen, setTogetherOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   // 가족 공유 장볼 목록 동기화
@@ -99,14 +111,28 @@ export default function App() {
   }
 
   function handleReset() {
-    if (window.confirm('저장하지 않고 목록을 모두 비울까요?')) clearAll()
+    const ask = together
+      ? '저장하지 않고 모두 비울까요?\n같이 장보는 가족의 장바구니에서도 지워져요.'
+      : '저장하지 않고 목록을 모두 비울까요?'
+    if (window.confirm(ask)) clearAll()
   }
 
   function handleFinish() {
     const label = `${formatDateKo(Date.now())}${storeName ? ` (${storeName})` : ''}`
-    if (!window.confirm(`${label} 쇼핑을 기록에 저장할까요?`)) return
-    const trip = finishShopping()
+    const ask = together
+      ? `${label} 같이 장본 쇼핑을 기록에 저장할까요?\n가족의 장바구니도 함께 비워져요.`
+      : `${label} 쇼핑을 기록에 저장할까요?`
+    if (!window.confirm(ask)) return
+    const trip = finishShoppingTogether()
     if (trip) setToast('쇼핑이 저장됐어요 · 기록에서 확인')
+  }
+
+  /** 같이 장보기 시작·참여 — 이름이 없으면 시트에서 먼저 받는다 */
+  function startOrJoinTogether() {
+    if (!useFamily.getState().myName) return setTogetherOpen(true)
+    startTogether()
+      .then((r) => setToast(r === 'joined' ? '가족이 시작한 같이 장보기에 참여했어요' : '같이 장보기를 시작했어요'))
+      .catch((e) => setToast(errorText(e)))
   }
 
   return (
@@ -116,9 +142,11 @@ export default function App() {
         onPickStore={() => setPickingStore(true)}
         onOpenHistory={() => setHistoryOpen(true)}
         onEditBudget={() => setBudgetOpen(true)}
+        onOpenTogether={() => setTogetherOpen(true)}
       />
 
       <main className="flex-1 px-5 pb-44 pt-5">
+        <TogetherBanner onJoin={startOrJoinTogether} onOpenHistory={() => setHistoryOpen(true)} />
         <ShoppingList />
         {items.length === 0 ? (
           <>
@@ -129,6 +157,7 @@ export default function App() {
                 아래 버튼을 눌러 가격표를 촬영해 보세요.
               </p>
             </div>
+            <TogetherStartCard onStart={startOrJoinTogether} />
             {/* 장보고 온 뒤: 영수증으로 기록 남기기 (카트가 빌 때만) */}
             <button
               onClick={() => setReceiptOpen(true)}
@@ -231,6 +260,7 @@ export default function App() {
           onClose={() => setBudgetOpen(false)}
         />
       )}
+      {togetherOpen && <TogetherSheet onClose={() => setTogetherOpen(false)} onToast={setToast} />}
       {historyOpen && (
         <HistoryScreen onClose={() => setHistoryOpen(false)} onAddReceipt={() => setReceiptOpen(true)} />
       )}

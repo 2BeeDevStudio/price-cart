@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { useList, visibleItems, type ListItem } from '../store/list'
 import { useCart } from '../store/cart'
 import { useFamily, isMine } from '../store/family'
-import type { ShoppingTrip } from '../types'
+import { useTogether, addedByMe, type CartItemOut, type TogetherMeta } from '../store/together'
+import type { Item, ShoppingTrip } from '../types'
 
 /**
  * 가족 공유 동기화 — 장볼 목록 + 가족 가계부(지난 쇼핑)
@@ -10,6 +11,7 @@ import type { ShoppingTrip } from '../types'
  * - 공유 중 + 화면이 보일 때만 4초마다 서버를 확인 (목록과 가계부를 한 번에)
  * - 가계부는 "마지막으로 받은 번호 이후 바뀐 기록"만 받는다
  * - 오프라인이면 조용히 기다렸다가 다시 연결되면 이어서 보낸다
+ * - 같이 장보기 중이면 담은 상품·마트·예산도 같은 요청에 실어 주고받는다
  */
 
 const API = '/api/list'
@@ -47,11 +49,23 @@ export function errorText(e: unknown): string {
 /** 서버와 주고받는 기록 (보낼 때 수정 시각·삭제 표시를 붙인다) */
 type RemoteTrip = ShoppingTrip & { updatedAt?: number; deleted?: boolean }
 
+/** 서버의 같이 장보기 */
+interface RemoteCart {
+  sid: string
+  active: boolean
+  touchedAt: number
+  metaTs: number
+  meta: TogetherMeta
+  items: CartItemOut[]
+}
+
 interface SyncResp {
   items: ListItem[]
   trips?: RemoteTrip[]
   tripsSeq: number
   more: boolean
+  /** 같이 장보기를 물어봤을 때만 (없으면 null) */
+  cart?: RemoteCart | null
 }
 
 async function call<T = SyncResp>(body: object): Promise<T> {
@@ -96,6 +110,9 @@ export function parseShareInput(text: string): string | null {
 let dirty = false
 let applying = false
 let applyingTrips = false
+/** 같이 장보기: 서버로 보낼 게 있음 / 서버에서 받은 걸 반영하는 중 */
+let cartDirty = false
+let applyingCart = false
 let inflight = false
 /** 보내는 동안 다시 고쳐진 기록 (보낸 뒤에도 대기열에 남겨야 함) */
 const touchedDuringFlight = new Set<string>()
@@ -107,6 +124,8 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 const ledgerOn = () => useFamily.getState().shareLedger && !!useList.getState().shareId
 const tripsSince = () => (ledgerOn() ? useFamily.getState().ledgerSeq : -1)
 const hasPendingTrips = () => ledgerOn() && useFamily.getState().ledgerPending.length > 0
+const hasPendingCart = () => cartDirty || useTogether.getState().pendingEnd != null
+const needsPush = () => dirty || hasPendingTrips() || hasPendingCart()
 
 function applyRemote(items: ListItem[], replace = false) {
   applying = true
@@ -161,6 +180,7 @@ function applyResp(resp: SyncResp, id: string) {
     useFamily.setState({ ledgerSeq: resp.tripsSeq })
     if (resp.more) setTimeout(() => void pull(), 50)
   }
+  if (resp.cart !== undefined) applyCart(resp.cart)
 }
 
 function markOk() {
@@ -239,33 +259,48 @@ async function push() {
   const id = useList.getState().shareId
   if (!id || inflight || locked) return
   inflight = true
+  const listDirty = dirty
   dirty = false
   touchedDuringFlight.clear()
   const trips = outgoingTrips()
   const sent = new Set(trips.map((t) => t.id))
+  const cart = cartRequest()
+  const sentEnd = useTogether.getState().pendingEnd
+  if (cart.mode === 'merge') cartDirty = false
   useSync.setState({ status: 'syncing' })
   try {
-    const resp = await call({ op: 'merge', id, items: outgoing(), trips, tripsSince: tripsSince() })
+    const resp = await call({
+      op: 'merge',
+      id,
+      items: listDirty ? outgoing() : [],
+      trips,
+      tripsSince: tripsSince(),
+      cart,
+    })
     const pending = useFamily.getState().ledgerPending
     useFamily.setState({ ledgerPending: pending.filter((x) => !sent.has(x) || touchedDuringFlight.has(x)) })
+    if (cart.mode === 'end' && useTogether.getState().pendingEnd === sentEnd) {
+      useTogether.setState({ pendingEnd: null })
+    }
     applyResp(resp, id)
     markOk()
   } catch (e) {
-    dirty = true
+    dirty = dirty || listDirty
+    if (cart.mode === 'merge') cartDirty = true
     handleError(e)
   } finally {
     inflight = false
   }
-  if (dirty || hasPendingTrips()) schedulePush()
+  if (needsPush()) schedulePush()
 }
 
 async function pull() {
   const id = useList.getState().shareId
   if (!id || inflight || locked || document.visibilityState !== 'visible') return
-  if (dirty || hasPendingTrips()) return void push()
+  if (needsPush()) return void push()
   inflight = true
   try {
-    const resp = await call({ op: 'get', id, tripsSince: tripsSince() })
+    const resp = await call({ op: 'get', id, tripsSince: tripsSince(), cart: { mode: 'read' } })
     applyResp(resp, id)
     markOk()
   } catch (e) {
@@ -273,7 +308,7 @@ async function pull() {
   } finally {
     inflight = false
   }
-  if (dirty || hasPendingTrips()) schedulePush()
+  if (needsPush()) schedulePush()
 }
 
 function schedulePush() {
@@ -320,6 +355,27 @@ export function startListSync(): () => void {
     schedulePush()
   })
 
+  // 같이 장보기: 내가 담거나 고치거나 지운 상품, 마트·예산 변경을 서버로
+  const unsubTogether = useCart.subscribe((s, prev) => {
+    if (applyingCart || !useTogether.getState().sid) return
+    const itemsChanged = s.items !== prev.items
+    const metaChanged = s.storeName !== prev.storeName || s.budget !== prev.budget
+    if (!itemsChanged && !metaChanged) return
+    const now = Date.now()
+    if (itemsChanged) {
+      const cur = new Set(s.items.map((i) => i.id))
+      const gone = prev.items.filter((i) => !cur.has(i.id))
+      if (gone.length) {
+        const tomb = { ...useTogether.getState().tomb }
+        for (const i of gone) tomb[i.id] = now
+        useTogether.setState({ tomb })
+      }
+    }
+    if (metaChanged) useTogether.setState({ metaTs: now })
+    cartDirty = true
+    schedulePush()
+  })
+
   const onVisible = () => {
     if (document.visibilityState === 'visible') void pull()
   }
@@ -335,6 +391,7 @@ export function startListSync(): () => void {
   return () => {
     unsubList()
     unsubCart()
+    unsubTogether()
     document.removeEventListener('visibilitychange', onVisible)
     window.removeEventListener('online', onVisible)
     if (pollTimer) clearInterval(pollTimer)
@@ -379,6 +436,7 @@ async function joinInner(id: string): Promise<void> {
   if (wasShared) {
     applyRemote(remote.items, true)
     dropFamilyTrips()
+    dropTogether()
   } else {
     const { items } = await call({ op: 'merge', id, items: outgoing() })
     applyRemote(items)
@@ -420,6 +478,7 @@ export const reissueShare = (): Promise<string> =>
 
 /** 이 폰에서 공유 끄기 (내 목록·기록은 남고, 가족과 연결만 끊김) */
 export function stopShare() {
+  dropTogether()
   if (useFamily.getState().shareLedger) dropFamilyTrips()
   useFamily.setState({ shareLedger: false, ledgerSeq: 0, ledgerPending: [] })
   useList.getState().setShareId(null)
@@ -476,3 +535,253 @@ export function renameMe(name: string) {
 }
 
 export const clearNotice = () => useSync.setState({ notice: null })
+
+// ── 같이 장보기 ──────────────────────────────────────────
+// 가족 중 한 명이 시작하면 그 장보기 동안만 장바구니 하나를 같이 쓴다.
+// 상품마다 updatedAt 이 더 큰 쪽이 이기고, 지운 상품은 삭제 표시로 보낸다.
+// 누가 "쇼핑 완료"를 누르면 그 사람 폰에 기록 하나로 남고, 다른 폰에서는 그 상품들이 치워진다.
+
+const CART_SEND_ITEMS = 200
+const CART_SEND_TOMBS = 100
+
+const myLabel = () => useFamily.getState().myName || '가족'
+
+/** 서버로 보낼 상품 (내 상품엔 지금 내 이름을 붙인다) + 삭제 표시 */
+function outgoingCart(): CartItemOut[] {
+  const dev = useFamily.getState().deviceId
+  const out: CartItemOut[] = useCart
+    .getState()
+    .items.slice(0, CART_SEND_ITEMS)
+    .map((it) => {
+      const mine = addedByMe(it, dev)
+      return {
+        ...it,
+        updatedAt: it.updatedAt ?? it.createdAt,
+        by: it.by ?? dev,
+        byName: mine ? myLabel() : it.byName,
+      }
+    })
+  const tombs = Object.entries(useTogether.getState().tomb)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, CART_SEND_TOMBS)
+  for (const [id, ts] of tombs) out.push({ id, updatedAt: ts, deleted: true })
+  return out
+}
+
+/** 마트·예산은 지금 장바구니 값으로 */
+function currentMeta(): TogetherMeta {
+  const c = useCart.getState()
+  const { store: _s, budget: _b, ...rest } = useTogether.getState().meta
+  return {
+    ...rest,
+    ...(c.storeName.trim() ? { store: c.storeName.trim() } : {}),
+    ...(c.budget != null ? { budget: c.budget } : {}),
+  }
+}
+
+/** 이번 요청에 실을 같이 장보기 부분 */
+function cartRequest(): { mode: string } & Record<string, unknown> {
+  const t = useTogether.getState()
+  if (t.pendingEnd) return { mode: 'end', ...t.pendingEnd }
+  if (t.sid && cartDirty) {
+    return { mode: 'merge', sid: t.sid, metaTs: t.metaTs || 1, meta: currentMeta(), items: outgoingCart() }
+  }
+  return { mode: 'read' }
+}
+
+function setCart(patch: Partial<{ items: Item[]; storeName: string; budget: number | null }>) {
+  applyingCart = true
+  try {
+    useCart.setState(patch)
+  } finally {
+    applyingCart = false
+  }
+}
+
+/** 이 폰에서만 같이 장보기를 그만둔다 (장바구니는 그대로) */
+function dropTogether() {
+  const t = useTogether.getState()
+  if (!t.sid && !t.invite) return
+  useTogether.setState({ sid: null, metaTs: 0, meta: {}, tomb: {}, invite: null, dismissed: t.sid ?? t.dismissed })
+  cartDirty = false
+}
+
+/** 서버의 같이 장보기를 이 폰에 반영 */
+function applyCart(remote: RemoteCart | null) {
+  const t = useTogether.getState()
+  const dev = useFamily.getState().deviceId
+
+  // 참여 중이 아니면: 진행 중인 같이 장보기가 있으면 참여를 권한다
+  if (!t.sid) {
+    const invite =
+      remote && remote.active && remote.sid !== t.dismissed && remote.sid !== t.pendingEnd?.sid
+        ? {
+            sid: remote.sid,
+            name: remote.meta.startedBy === dev ? '내' : remote.meta.startedByName || '가족',
+            store: remote.meta.store,
+          }
+        : null
+    if (JSON.stringify(invite) !== JSON.stringify(t.invite)) useTogether.setState({ invite })
+    return
+  }
+
+  // 같이 장보기가 사라졌거나(하루 지남·링크 재발급) 다른 것으로 바뀜 → 혼자 장보기로 (장바구니는 그대로)
+  if (!remote || remote.sid !== t.sid || (!remote.active && !remote.meta.endedBy)) {
+    dropTogether()
+    return
+  }
+
+  // 누가 쇼핑을 완료함 → 기록에 들어간 상품만 치운다 (그 뒤에 내가 담은 건 남김)
+  if (!remote.active) {
+    const m = remote.meta
+    const done = m.ids ? new Set(m.ids) : null
+    const rest = done ? useCart.getState().items.filter((i) => !done.has(i.id)) : []
+    setCart(rest.length ? { items: rest } : { items: [], storeName: '', budget: null })
+    useTogether.setState({
+      sid: null,
+      metaTs: 0,
+      meta: {},
+      tomb: {},
+      dismissed: remote.sid,
+      ended:
+        m.endedBy === dev
+          ? null
+          : { name: m.endedByName || '가족', store: m.store, total: m.total ?? 0, count: m.count ?? 0 },
+    })
+    cartDirty = false
+    return
+  }
+
+  // 진행 중: 상품별로 더 최근에 고친 쪽
+  const cart = useCart.getState()
+  const byId = new Map(cart.items.map((i) => [i.id, i]))
+  let changed = false
+  for (const r of remote.items) {
+    if (!r || typeof r.id !== 'string') continue
+    const cur = byId.get(r.id)
+    const curTs = cur ? (cur.updatedAt ?? cur.createdAt) : -1
+    if ('deleted' in r && r.deleted) {
+      if (cur && curTs <= r.updatedAt) {
+        byId.delete(r.id)
+        changed = true
+      }
+      continue
+    }
+    const tombTs = t.tomb[r.id]
+    if (tombTs != null && tombTs >= r.updatedAt) continue
+    if (!cur || curTs < r.updatedAt) {
+      byId.set(r.id, r as Item)
+      changed = true
+    }
+  }
+  const patch: Partial<{ items: Item[]; storeName: string; budget: number | null }> = {}
+  if (changed) patch.items = [...byId.values()].sort((a, b) => b.createdAt - a.createdAt)
+  if (remote.metaTs > t.metaTs) {
+    patch.storeName = remote.meta.store ?? ''
+    patch.budget = remote.meta.budget ?? null
+    useTogether.setState({ metaTs: remote.metaTs, meta: remote.meta })
+  }
+  if (Object.keys(patch).length) setCart(patch)
+}
+
+/**
+ * 같이 장보기 시작. 가족이 이미 시작했으면 거기에 참여한다 (지금 담은 상품은 합쳐짐).
+ * 'started' = 내가 시작 / 'joined' = 가족 것에 참여
+ */
+export const startTogether = (): Promise<'started' | 'joined'> =>
+  withLock(async () => {
+    const id = useList.getState().shareId
+    if (!id) throw new ApiError(400)
+    const f = useFamily.getState()
+    const sid = newShareId()
+    const now = Date.now()
+    // 예전 상품엔 담은 사람·고친 시각이 없을 수 있어 채운다
+    setCart({
+      items: useCart
+        .getState()
+        .items.map((it) => ({ ...it, by: it.by ?? f.deviceId, updatedAt: it.updatedAt ?? now })),
+    })
+    useTogether.setState({ tomb: {}, meta: {} })
+    const meta = { ...currentMeta(), startedBy: f.deviceId, startedByName: myLabel() }
+    const resp = await call({
+      op: 'merge',
+      id,
+      items: [],
+      cart: { mode: 'start', sid, metaTs: now, meta, items: outgoingCart() },
+    })
+    const rc = resp.cart
+    if (!rc || !rc.active) throw new ApiError(500)
+    useTogether.setState({ sid: rc.sid, metaTs: 0, meta: {}, tomb: {}, invite: null, ended: null, dismissed: null })
+    cartDirty = false
+    applyCart(rc)
+    applyRemote(resp.items)
+    markOk()
+    return rc.sid === sid ? 'started' : 'joined'
+  })
+
+/** 같이 장보기에서 나가기 — 내 장바구니는 비우고, 내가 담은 상품은 가족 쪽에 남는다 */
+export function leaveTogether() {
+  if (!useTogether.getState().sid) return
+  dropTogether()
+  setCart({ items: [], storeName: '', budget: null })
+}
+
+/** 같이 담은 사람 이름 (완료한 나부터, 나머지는 먼저 담은 순서) */
+export function togetherShoppers(items: Item[]): string[] {
+  const dev = useFamily.getState().deviceId
+  const names = new Map<string, string>([[dev, myLabel()]])
+  for (const it of [...items].sort((a, b) => a.createdAt - b.createdAt)) {
+    const key = it.by ?? dev
+    if (!names.has(key)) names.set(key, it.byName || '가족')
+  }
+  return [...names.values()]
+}
+
+/**
+ * 쇼핑 완료. 같이 장보는 중이면 함께 담은 사람을 기록에 남기고,
+ * 가족 폰에도 완료를 알린다 (연결이 안 되면 나중에 이어서 보냄)
+ */
+export function finishShoppingTogether(): ShoppingTrip | null {
+  const t = useTogether.getState()
+  const cart = useCart.getState()
+  if (!t.sid) return cart.finishShopping()
+  if (cart.items.length === 0) return null
+  const f = useFamily.getState()
+  const items = outgoingCart()
+  const meta = currentMeta()
+  const sid = t.sid
+  const ids = cart.items.map((i) => i.id)
+  const shoppers = togetherShoppers(cart.items)
+  // 먼저 같이 장보기에서 빠져야 장바구니 비우기가 "전부 삭제"로 퍼지지 않는다
+  useTogether.setState({ sid: null, metaTs: 0, meta: {}, tomb: {}, dismissed: sid })
+  cartDirty = false
+  const trip = cart.finishShopping({ shoppers })
+  if (!trip) return null
+  useTogether.setState({
+    pendingEnd: {
+      sid,
+      metaTs: Date.now(),
+      meta: {
+        ...meta,
+        endedBy: f.deviceId,
+        endedByName: myLabel(),
+        tripId: trip.id,
+        total: trip.total,
+        count: trip.itemCount,
+        ids,
+      },
+      items,
+    },
+  })
+  schedulePush()
+  return trip
+}
+
+/** 참여 권유 닫기 */
+export function dismissInvite() {
+  const inv = useTogether.getState().invite
+  if (inv) useTogether.setState({ invite: null, dismissed: inv.sid })
+}
+
+/** 완료 안내 닫기 */
+export const clearEnded = () => useTogether.setState({ ended: null })

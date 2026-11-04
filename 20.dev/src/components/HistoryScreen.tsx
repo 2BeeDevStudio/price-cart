@@ -218,7 +218,9 @@ export default function HistoryScreen({ onClose, onAddReceipt }: HistoryScreenPr
               const bs = trip.budget != null ? budgetStyle(trip.total, trip.budget) : null
               const mine = isMine(trip, deviceId)
               const person = personOf(trip)
-              const who = authorLabel(trip, deviceId, myName)
+              const author = authorLabel(trip, deviceId, myName)
+              // 같이 장본 기록이면 함께 담은 사람 모두
+              const who = trip.shoppers && trip.shoppers.length > 1 ? trip.shoppers.join(' · ') : author
               return (
                 <li key={trip.id} className="overflow-hidden rounded-2xl bg-white shadow-card">
                   <button
@@ -237,9 +239,9 @@ export default function HistoryScreen({ onClose, onAddReceipt }: HistoryScreenPr
                           <span
                             className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-bold text-white"
                             style={{ background: person.color }}
-                            aria-label={`${who} 기록`}
+                            aria-label={`${author} 기록`}
                           >
-                            {who.slice(0, 1)}
+                            {author.slice(0, 1)}
                           </span>
                         )}
                         <span className="truncate font-bold text-slate-900">{trip.store || '마트 없음'}</span>
@@ -253,7 +255,7 @@ export default function HistoryScreen({ onClose, onAddReceipt }: HistoryScreenPr
                         )}
                       </div>
                       <div className="mt-0.5 text-xs text-slate-400 tabular-nums">
-                        {familyOn && `${who} · `}
+                        {(familyOn || trip.shoppers) && `${who} · `}
                         {formatDateKo(trip.date)} · 상품 {trip.itemCount}개
                       </div>
                     </div>

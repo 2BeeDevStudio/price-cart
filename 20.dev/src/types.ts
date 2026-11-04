@@ -15,6 +15,12 @@ export interface Item {
   promo?: PromoType
   /** 담은 시각 (epoch ms) */
   createdAt: number
+  /** 마지막으로 고친 시각 — 같이 장보기에서 더 최근에 고친 쪽이 이김 (예전 상품은 없음) */
+  updatedAt?: number
+  /** 담은 사람의 기기 id (없으면 이 폰에서 담은 것) */
+  by?: string
+  /** 담은 사람 이름 (가족이 담은 상품만) */
+  byName?: string
 }
 
 /** '쇼핑 끝'으로 저장한 한 번의 쇼핑 기록 (스냅샷) */
@@ -38,4 +44,6 @@ export interface ShoppingTrip {
   authorId?: string
   /** 가족 가계부: 기록한 사람 이름 */
   authorName?: string
+  /** 같이 장보기로 남긴 기록: 함께 담은 사람 이름들 */
+  shoppers?: string[]
 }

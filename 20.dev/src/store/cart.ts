@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Item, PromoType, ShoppingTrip } from '../types'
 import { linePaid, lineSavings } from '../lib/promo'
+import { useFamily } from './family'
 
 /** 마트 프리셋 (칩) */
 export const STORE_PRESETS = ['코스트코', '이마트', '홈플러스', '다이소', '롯데마트', '편의점']
@@ -42,7 +43,7 @@ interface CartState {
   /** 현재 쇼핑의 예산 설정 (null = 해제) */
   setBudget: (budget: number | null) => void
   /** 쇼핑 끝 — 현재 목록을 기록으로 저장하고 카트를 비운다. 저장된 기록 반환(비어있으면 null) */
-  finishShopping: () => ShoppingTrip | null
+  finishShopping: (extra?: { shoppers?: string[] }) => ShoppingTrip | null
   /** 영수증 등 외부 목록을 바로 새 기록으로 저장 (현재 카트는 건드리지 않음) */
   saveReceiptTrip: (data: { store?: string; items: Item[]; date?: number }) => ShoppingTrip
   /** 지난 기록 삭제 */
@@ -91,6 +92,9 @@ export const useCart = create<CartState>()(
                 quantity: 1,
                 promo,
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
+                // 같이 장보기에서 누가 담았는지 보여주려고 이 폰 id 를 붙인다
+                by: useFamily.getState().deviceId,
               },
               ...state.items,
             ],
@@ -100,21 +104,21 @@ export const useCart = create<CartState>()(
       setQuantity: (id, quantity) =>
         set((state) => ({
           items: state.items.map((it) =>
-            it.id === id ? { ...it, quantity: Math.max(1, Math.round(quantity)) } : it,
+            it.id === id ? { ...it, quantity: Math.max(1, Math.round(quantity)), updatedAt: Date.now() } : it,
           ),
         })),
 
       incQuantity: (id) =>
         set((state) => ({
           items: state.items.map((it) =>
-            it.id === id ? { ...it, quantity: it.quantity + 1 } : it,
+            it.id === id ? { ...it, quantity: it.quantity + 1, updatedAt: Date.now() } : it,
           ),
         })),
 
       decQuantity: (id) =>
         set((state) => ({
           items: state.items.map((it) =>
-            it.id === id ? { ...it, quantity: Math.max(1, it.quantity - 1) } : it,
+            it.id === id ? { ...it, quantity: Math.max(1, it.quantity - 1), updatedAt: Date.now() } : it,
           ),
         })),
 
@@ -122,7 +126,7 @@ export const useCart = create<CartState>()(
         set((state) => ({
           items: state.items.map((it) => {
             if (it.id !== id) return it
-            const next = { ...it }
+            const next = { ...it, updatedAt: Date.now() }
             if (patch.name !== undefined) next.name = patch.name.trim() || undefined
             if (patch.price !== undefined) next.price = Math.max(0, Math.round(patch.price))
             if (patch.promo !== undefined) next.promo = patch.promo ?? undefined
@@ -144,7 +148,7 @@ export const useCart = create<CartState>()(
 
       setBudget: (budget) => set({ budget }),
 
-      finishShopping: () => {
+      finishShopping: (extra) => {
         const state = get()
         if (state.items.length === 0) return null
         const trip: ShoppingTrip = {
@@ -156,6 +160,7 @@ export const useCart = create<CartState>()(
           budget: state.budget ?? undefined,
           savings: state.items.reduce((sum, it) => sum + lineSavings(it), 0),
           itemCount: state.items.reduce((sum, it) => sum + it.quantity, 0),
+          ...(extra?.shoppers && extra.shoppers.length > 1 ? { shoppers: extra.shoppers } : {}),
         }
         set({ items: [], storeName: '', budget: null, trips: [trip, ...state.trips] })
         return trip

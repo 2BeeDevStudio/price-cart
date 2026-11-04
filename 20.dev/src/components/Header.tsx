@@ -1,15 +1,25 @@
 import { useCart, selectTotal, selectCount, selectSavings } from '../store/cart'
 import { formatWon } from '../lib/format'
 import { budgetStyle, budgetRatio } from '../lib/budgetColor'
+import { useList } from '../store/list'
+import { useFamily } from '../store/family'
+import { useTogether, peopleSummary } from '../store/together'
+import { UsersIcon } from './TogetherBits'
 
 interface HeaderProps {
   onReset: () => void
   onPickStore: () => void
   onOpenHistory: () => void
   onEditBudget: () => void
+  onOpenTogether: () => void
 }
 
-export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudget }: HeaderProps) {
+export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudget, onOpenTogether }: HeaderProps) {
+  const shared = useList((s) => s.shareId != null)
+  const together = useTogether((s) => s.sid != null)
+  const deviceId = useFamily((s) => s.deviceId)
+  const items = useCart((s) => s.items)
+  const people = together ? peopleSummary(items, deviceId) : []
   const total = useCart(selectTotal)
   const count = useCart(selectCount)
   const savings = useCart(selectSavings)
@@ -53,6 +63,17 @@ export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudg
               </svg>
             </button>
           )}
+          {shared && (
+            <button
+              onClick={onOpenTogether}
+              aria-label="같이 장보기"
+              className={`flex h-10 w-10 items-center justify-center rounded-full shadow-card ${
+                together ? 'bg-lime text-brand active:bg-lime-dark' : 'bg-white text-slate-600 active:bg-slate-50'
+              }`}
+            >
+              <UsersIcon />
+            </button>
+          )}
           <button
             onClick={onOpenHistory}
             aria-label="지난 기록"
@@ -70,8 +91,19 @@ export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudg
       <div className="mt-4 rounded-[28px] bg-brand p-6 text-white shadow-hero">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-brand-light">
-              총 예상 결제금액
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-brand-light">
+                총 예상 결제금액
+              </span>
+              {together && (
+                <button
+                  onClick={onOpenTogether}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-lime active:bg-white/20"
+                >
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lime" />
+                  같이 장보는 중
+                </button>
+              )}
             </div>
             <div className="mt-1.5 text-[40px] font-bold leading-none tracking-tight tabular-nums">
               {formatWon(total)}
@@ -93,7 +125,10 @@ export default function Header({ onReset, onPickStore, onOpenHistory, onEditBudg
             <path d="M5 7h15l-1.5 8.5a2 2 0 0 1-2 1.5H8.5a2 2 0 0 1-2-1.6L5 5H3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span>상품 {count}개</span>
-          {savings > 0 && <span className="text-lime">· {formatWon(savings)} 절약</span>}
+          {people.length > 1 && (
+            <span className="truncate">· {people.map((p) => `${p.label} ${p.count}`).join(' · ')}</span>
+          )}
+          {savings > 0 && <span className="flex-none text-lime">· {formatWon(savings)} 절약</span>}
         </div>
 
         {/* 예산 */}

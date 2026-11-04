@@ -5,6 +5,8 @@ import { formatWon } from '../lib/format'
 import { linePaid, lineOriginal, lineSavings, freeUnits, promoBadgeClass } from '../lib/promo'
 import { tileStyle, tileChar } from '../lib/tileColor'
 import ItemEditSheet from './ItemEditSheet'
+import { useTogether, addedByMe, adderLabel } from '../store/together'
+import { useFamily } from '../store/family'
 
 interface ItemRowProps {
   item: Item
@@ -16,6 +18,9 @@ export default function ItemRow({ item }: ItemRowProps) {
   const remove = useCart((s) => s.removeItem)
   const updateItem = useCart((s) => s.updateItem)
   const [editing, setEditing] = useState(false)
+  const together = useTogether((s) => s.sid != null)
+  const deviceId = useFamily((s) => s.deviceId)
+  const mine = addedByMe(item, deviceId)
 
   const paid = linePaid(item)
   const savings = lineSavings(item)
@@ -50,6 +55,16 @@ export default function ItemRow({ item }: ItemRowProps) {
           )}
           {item.name && (
             <span className="truncate text-sm font-semibold text-slate-700">{item.name}</span>
+          )}
+          {/* 같이 장보는 중: 누가 담았는지 */}
+          {together && (
+            <span
+              className={`flex-none rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                mine ? 'bg-lime-soft text-lime-800' : 'bg-brand/10 text-brand'
+              }`}
+            >
+              {adderLabel(item, deviceId)}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1.5 text-base font-bold text-slate-900 tabular-nums">
